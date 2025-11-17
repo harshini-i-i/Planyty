@@ -11,7 +11,7 @@ const TaskModal = ({ isOpen, onClose, task }) => {
     <Modal isOpen={isOpen} onClose={onClose} title={`Task: ${task.title}`}>
       <div className="space-y-4 p-4">
         <div className="flex items-center space-x-2">
-          <ListChecks size={20} className="text-dark" />
+          <ListChecks size={20} className="text-purple-500" />
           <h3 className="text-xl font-semibold text-gray-800">{task.title}</h3>
         </div>
 
@@ -29,7 +29,7 @@ const TaskModal = ({ isOpen, onClose, task }) => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
             <div className="flex items-center space-x-1 text-gray-600">
-              <Calendar size={16} />
+              <Calendar size={16} className="text-purple-500" />
               <span>N/A</span>
             </div>
           </div>
@@ -38,7 +38,7 @@ const TaskModal = ({ isOpen, onClose, task }) => {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
           <div className="flex items-center space-x-1 text-gray-600">
-            <Users size={16} />
+            <Users size={16} className="text-purple-500" />
             <span>Me</span>
           </div>
         </div>
@@ -49,9 +49,9 @@ const TaskModal = ({ isOpen, onClose, task }) => {
             {task.tags.map((tag, index) => (
               <span
                 key={index}
-                className="px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-full flex items-center"
+                className="px-3 py-1 text-sm font-medium text-purple-600 bg-purple-100 rounded-full flex items-center"
               >
-                <Tag size={14} className="mr-1" />
+                <Tag size={14} className="mr-1 text-purple-500" />
                 {tag}
               </span>
             ))}
@@ -60,7 +60,7 @@ const TaskModal = ({ isOpen, onClose, task }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-          <p className="text-gray-600 bg-gray-50 p-3 rounded-md min-h-[100px]">
+          <p className="text-gray-600 bg-purple-50 p-3 rounded-md min-h-[100px]">
             {/* Placeholder for task description */}
             This is a placeholder for the detailed description of the task "{task.title}".
             It should include all necessary context, requirements, and acceptance criteria.
@@ -70,12 +70,12 @@ const TaskModal = ({ isOpen, onClose, task }) => {
         <div className="pt-4 border-t">
           <h4 className="text-lg font-semibold mb-2">Comments</h4>
           <div className="space-y-2">
-            <div className="p-3 bg-gray-100 rounded-md text-sm">
-              <p className="font-medium text-dark">User 1:</p>
+            <div className="p-3 bg-purple-100 rounded-md text-sm">
+              <p className="font-medium text-purple-800">User 1:</p>
               <p>Starting work on this task now.</p>
             </div>
-            <div className="p-3 bg-gray-100 rounded-md text-sm">
-              <p className="font-medium text-dark">User 2:</p>
+            <div className="p-3 bg-purple-100 rounded-md text-sm">
+              <p className="font-medium text-purple-800">User 2:</p>
               <p>Need clarification on the design specs for the login page.</p>
             </div>
           </div>

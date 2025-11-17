@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Clock, User } from 'lucide-react';
+import { Tag, Clock, User, CheckCircle } from 'lucide-react';
 
 const getPriorityColor = (priority) => {
   switch (priority) {
@@ -14,16 +14,33 @@ const getPriorityColor = (priority) => {
   }
 };
 
-const TaskCard = ({ task }) => {
+const TaskCard = ({ task, isCompleted = false }) => {
   return (
-    <div className="p-4 bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150">
-      <h3 className="text-base font-semibold text-gray-800 mb-2">{task.title}</h3>
+    <div className={`p-4 bg-white rounded-xl border border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all duration-300 ${
+      isCompleted ? 'opacity-75 bg-green-50 border-green-200' : ''
+    }`}>
+      {/* Task Title with Completion Status */}
+      <div className="flex items-start justify-between mb-2">
+        <h3 className={`text-base font-semibold flex-1 ${
+          isCompleted ? 'text-gray-500 line-through' : 'text-gray-800'
+        }`}>
+          {task.title}
+        </h3>
+        {isCompleted && (
+          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 ml-2 mt-1" />
+        )}
+      </div>
       
+      {/* Tags */}
       <div className="flex flex-wrap gap-2 mb-3">
         {task.tags.map((tag, index) => (
           <span
             key={index}
-            className="px-2 py-0.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-full"
+            className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+              isCompleted 
+                ? 'text-gray-400 bg-gray-100' 
+                : 'text-purple-600 bg-purple-100'
+            }`}
           >
             <Tag size={12} className="inline mr-1" />
             {tag}
@@ -31,22 +48,45 @@ const TaskCard = ({ task }) => {
         ))}
       </div>
 
-      <div className="flex items-center justify-between text-sm text-gray-500">
+      {/* Task Metadata */}
+      <div className="flex items-center justify-between text-sm">
         <div className="flex items-center space-x-2">
-          <span className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)}`}></span>
-          <span>{task.priority}</span>
+          <span className={`w-2 h-2 rounded-full ${
+            isCompleted ? 'bg-gray-400' : getPriorityColor(task.priority)
+          }`}></span>
+          <span className={isCompleted ? 'text-gray-400' : 'text-gray-500'}>
+            {task.priority}
+          </span>
         </div>
         <div className="flex items-center space-x-4">
           <div className="flex items-center">
-            <Clock size={14} className="mr-1" />
-            <span>Due: {task.dueDate || 'N/A'}</span>
+            <Clock size={14} className={`mr-1 ${
+              isCompleted ? 'text-gray-400' : 'text-purple-500'
+            }`} />
+            <span className={isCompleted ? 'text-gray-400' : 'text-gray-500'}>
+              Due: {task.dueDate || 'N/A'}
+            </span>
           </div>
           <div className="flex items-center">
-            <User size={14} className="mr-1" />
-            <span>{task.assignee || 'Me'}</span>
+            <User size={14} className={`mr-1 ${
+              isCompleted ? 'text-gray-400' : 'text-purple-500'
+            }`} />
+            <span className={isCompleted ? 'text-gray-400' : 'text-gray-500'}>
+              {task.assignee || 'Me'}
+            </span>
           </div>
         </div>
       </div>
+
+      {/* Completion Date */}
+      {isCompleted && task.completedAt && (
+        <div className="mt-2 pt-2 border-t border-green-200">
+          <div className="flex items-center text-xs text-green-600">
+            <CheckCircle size={12} className="mr-1" />
+            Completed on {task.completedAt}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -3,10 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { Mail, Lock, User, UserPlus, LogIn, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, LogIn, ArrowLeft, Sparkles, Key, Shield } from 'lucide-react';
 
 const SignUp = () => {
-  const [step, setStep] = useState('email'); // 'email', 'verify', 'password'
+  const [step, setStep] = useState('email');
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [name, setName] = useState('');
@@ -14,15 +14,12 @@ const SignUp = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [authMethod, setAuthMethod] = useState(''); // 'google' or 'email'
+  const [authMethod, setAuthMethod] = useState('');
   
   const { initiateSignup, verifyEmail, completeSignup } = useAuth();
   const navigate = useNavigate();
 
-  // Step 1: Enter email and choose auth method
   const handleEmailSubmit = async (method) => {
-    console.log('Button clicked for method:', method);
-    console.log('Current step before:', step);
     setError('');
     
     if (!email) {
@@ -34,19 +31,13 @@ const SignUp = () => {
 
     try {
       const result = await initiateSignup(email, method);
-      console.log('Initiate signup result:', result);
       
-      // Always proceed to next step for demo
       if (method === 'google') {
         setStep('verify');
-        console.log('Navigating to verify step');
       } else {
         setStep('password');
-        console.log('Navigating to password step');
       }
     } catch (err) {
-      console.error('Error in handleEmailSubmit:', err);
-      // Even on error, proceed to next step for demo
       if (method === 'google') {
         setStep('verify');
       } else {
@@ -57,7 +48,6 @@ const SignUp = () => {
     }
   };
 
-  // Step 2: Verify code (Google flow)
   const handleVerifySubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -70,20 +60,17 @@ const SignUp = () => {
 
     try {
       const result = await verifyEmail(email, verificationCode);
-      console.log('Verify result:', result);
       
       if (result.success) {
         navigate('/dashboard');
       }
     } catch (err) {
-      console.log('Verify error:', err);
       setError(err.message || 'Invalid verification code. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 3: Set password (Email flow)
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -121,70 +108,67 @@ const SignUp = () => {
   // Step 1: Email entry
   if (step === 'email') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-primary">
-        <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-2xl">
-          <h2 className="text-3xl font-bold text-center text-dark">Create Account</h2>
-          <p className="text-center text-gray-600">Get started with Planyty today</p>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#EED5F0] via-white to-[#A067A3] p-6">
+        <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl border border-gray-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all duration-500 animate-float">
+          <div className="text-center animate-bounce-in">
+            <Sparkles className="w-12 h-12 text-purple-500 mx-auto mb-4 animate-pulse" />
+            <h2 className="text-3xl font-bold text-gray-800 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
+              Create Account
+            </h2>
+            <p className="text-gray-600 mt-2 animate-fade-in">Get started with Planyty today</p>
+          </div>
 
           {error && (
-            <div className="p-3 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
+            <div className="p-3 text-sm text-red-700 bg-red-100 rounded-lg animate-shake border border-red-200" role="alert">
               {error}
             </div>
           )}
 
-          <div className="space-y-4">
-            <div>
+          <div className="space-y-4 animate-slide-up delay-200">
+            <div className="animate-float delay-300">
               <label className="block text-sm font-medium text-gray-700 sr-only">Email</label>
               <div className="relative">
-                <Mail className="absolute w-5 h-5 text-gray-400 left-3 top-1/2 transform -translate-y-1/2" />
+                <Mail className="absolute w-5 h-5 text-purple-500 left-3 top-1/2 transform -translate-y-1/2 animate-pulse" />
                 <Input
                   type="email"
                   placeholder="Email Address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="pl-10"
+                  className="pl-10 transition-all duration-300 hover:scale-105 focus:scale-105 border-purple-200 focus:border-purple-500"
                 />
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 animate-stagger">
               <Button
                 type="button"
                 onClick={() => handleEmailSubmit('google')}
-                className="w-full flex items-center justify-center"
+                className="w-full flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-lg animate-pulse-slow border-2 border-transparent hover:border-white/30"
                 disabled={loading}
               >
-                <Mail className="w-5 h-5 mr-2" />
-                {loading ? 'Sending Code...' : 'Continue with Email Verification'}
+                <Mail className="w-5 h-5 mr-2 animate-bounce" />
+                {loading ? 'Sending Magic Code... ✨' : 'Continue with Email Verification'}
               </Button>
 
               <Button
                 type="button"
                 onClick={() => handleEmailSubmit('email')}
-                variant="outline"
-                className="w-full flex items-center justify-center"
+                className="w-full flex items-center justify-center bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold py-4 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-lg border-2 border-transparent hover:border-white/30 animate-float delay-100"
                 disabled={loading}
               >
-                <UserPlus className="w-5 h-5 mr-2" />
-                Continue with Email & Password
+                <Key className="w-5 h-5 mr-2 animate-bounce" />
+                {loading ? 'Setting Up... 🔐' : 'Continue with Email & Password'}
               </Button>
             </div>
           </div>
 
-          <div className="text-center text-sm text-gray-600">
+          <div className="text-center text-sm text-gray-600 animate-fade-in delay-500">
             Already have an account?{' '}
-            <Link to="/login" className="font-medium text-dark hover:text-accent">
-              <LogIn className="inline w-4 h-4 mr-1" />
+            <Link to="/login" className="font-bold text-purple-600 hover:text-purple-700 transition-all duration-300 hover:scale-110 inline-block">
+              <LogIn className="inline w-4 h-4 mr-1 animate-bounce" />
               Log In
             </Link>
-          </div>
-
-          {/* Debug info - remove in production */}
-          <div className="p-2 bg-yellow-100 rounded text-xs">
-            <p>Debug: Email: {email}</p>
-            <p>Current Step: {step}</p>
-            <p>Open browser console to see logs</p>
           </div>
         </div>
       </div>
@@ -194,33 +178,38 @@ const SignUp = () => {
   // Step 2: Verification (Google flow)
   if (step === 'verify') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-primary">
-        <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-2xl">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#EED5F0] via-white to-[#A067A3] p-6">
+        <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl border border-gray-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all duration-500 animate-slide-in-right">
           <button
             type="button"
             onClick={goBack}
-            className="flex items-center text-gray-600 hover:text-dark mb-4"
+            className="flex items-center text-gray-600 hover:text-purple-600 transition-all duration-300 hover:scale-105 mb-4 animate-fade-in"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back
           </button>
 
-          <h2 className="text-2xl font-bold text-center text-dark">Verify Your Email</h2>
-          <p className="text-center text-gray-600">
-            We sent a verification code to <strong>{email}</strong>
-          </p>
-          <p className="text-center text-sm text-gray-500">
-            Demo code: <strong>123456</strong>
-          </p>
+          <div className="text-center animate-bounce-in">
+            <Key className="w-12 h-12 text-purple-500 mx-auto mb-4 animate-bounce" />
+            <h2 className="text-2xl font-bold text-gray-800 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
+              Verify Your Email
+            </h2>
+            <p className="text-gray-600 mt-2">
+              We sent a verification code to <strong className="text-purple-600 animate-pulse">{email}</strong>
+            </p>
+            <p className="text-sm text-gray-500 mt-1 animate-fade-in">
+              Demo code: <strong className="text-purple-600">123456</strong>
+            </p>
+          </div>
 
           {error && (
-            <div className="p-3 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
+            <div className="p-3 text-sm text-red-700 bg-red-100 rounded-lg animate-shake border border-red-200" role="alert">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleVerifySubmit} className="space-y-4">
-            <div>
+          <form onSubmit={handleVerifySubmit} className="space-y-4 animate-slide-up delay-300">
+            <div className="animate-float">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Verification Code
               </label>
@@ -231,26 +220,19 @@ const SignUp = () => {
                 onChange={(e) => setVerificationCode(e.target.value)}
                 required
                 maxLength={6}
+                className="transition-all duration-300 hover:scale-105 focus:scale-105 text-center text-lg font-bold tracking-widest border-purple-200 focus:border-purple-500 animate-pulse-slow"
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full flex items-center justify-center"
+              className="w-full flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-lg animate-pulse-slow border-2 border-transparent hover:border-white/30"
               disabled={loading}
             >
-              {loading ? 'Verifying...' : 'Verify & Continue'}
+              <Shield className="w-5 h-5 mr-2 animate-bounce" />
+              {loading ? 'Verifying... 🔒' : 'Verify & Continue 🚀'}
             </Button>
           </form>
-
-          {/* Debug info - remove in production */}
-          <div className="p-2 bg-blue-100 rounded text-xs mt-4">
-            <p>Debug Info:</p>
-            <p>Email: {email}</p>
-            <p>Code Entered: {verificationCode}</p>
-            <p>Expected Code: 123456</p>
-            <p>Current Step: {step}</p>
-          </div>
         </div>
       </div>
     );
@@ -259,89 +241,86 @@ const SignUp = () => {
   // Step 3: Password setup (Email flow)
   if (step === 'password') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-primary">
-        <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-2xl">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#EED5F0] via-white to-[#A067A3] p-6">
+        <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl border border-gray-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all duration-500 animate-slide-in-left">
           <button
             type="button"
             onClick={goBack}
-            className="flex items-center text-gray-600 hover:text-dark mb-4"
+            className="flex items-center text-gray-600 hover:text-purple-600 transition-all duration-300 hover:scale-105 mb-4 animate-fade-in"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back
           </button>
 
-          <h2 className="text-2xl font-bold text-center text-dark">Complete Your Profile</h2>
-          <p className="text-center text-gray-600">
-            Setting up account for <strong>{email}</strong>
-          </p>
+          <div className="text-center animate-bounce-in">
+            <User className="w-12 h-12 text-purple-500 mx-auto mb-4 animate-bounce" />
+            <h2 className="text-2xl font-bold text-gray-800 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
+              Complete Your Profile
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Setting up account for <strong className="text-purple-600 animate-pulse">{email}</strong>
+            </p>
+          </div>
 
           {error && (
-            <div className="p-3 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
+            <div className="p-3 text-sm text-red-700 bg-red-100 rounded-lg animate-shake border border-red-200" role="alert">
               {error}
             </div>
           )}
 
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div>
+          <form onSubmit={handlePasswordSubmit} className="space-y-4 animate-stagger">
+            <div className="animate-slide-up delay-100">
               <label className="block text-sm font-medium text-gray-700 sr-only">Full Name</label>
               <div className="relative">
-                <User className="absolute w-5 h-5 text-gray-400 left-3 top-1/2 transform -translate-y-1/2" />
+                <User className="absolute w-5 h-5 text-purple-500 left-3 top-1/2 transform -translate-y-1/2 animate-pulse" />
                 <Input
                   type="text"
                   placeholder="Full Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="pl-10"
+                  className="pl-10 transition-all duration-300 hover:scale-105 focus:scale-105 border-purple-200 focus:border-purple-500"
                 />
               </div>
             </div>
-            <div>
+            <div className="animate-slide-up delay-200">
               <label className="block text-sm font-medium text-gray-700 sr-only">Password</label>
               <div className="relative">
-                <Lock className="absolute w-5 h-5 text-gray-400 left-3 top-1/2 transform -translate-y-1/2" />
+                <Lock className="absolute w-5 h-5 text-purple-500 left-3 top-1/2 transform -translate-y-1/2 animate-pulse" />
                 <Input
                   type="password"
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="pl-10"
+                  className="pl-10 transition-all duration-300 hover:scale-105 focus:scale-105 border-purple-200 focus:border-purple-500"
                 />
               </div>
             </div>
-            <div>
+            <div className="animate-slide-up delay-300">
               <label className="block text-sm font-medium text-gray-700 sr-only">Confirm Password</label>
               <div className="relative">
-                <Lock className="absolute w-5 h-5 text-gray-400 left-3 top-1/2 transform -translate-y-1/2" />
+                <Lock className="absolute w-5 h-5 text-purple-500 left-3 top-1/2 transform -translate-y-1/2 animate-pulse" />
                 <Input
                   type="password"
                   placeholder="Confirm Password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="pl-10"
+                  className="pl-10 transition-all duration-300 hover:scale-105 focus:scale-105 border-purple-200 focus:border-purple-500"
                 />
               </div>
             </div>
 
             <Button
               type="submit"
-              className="w-full flex items-center justify-center"
+              className="w-full flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-lg animate-pulse-slow border-2 border-transparent hover:border-white/30 mt-4"
               disabled={loading}
             >
-              <UserPlus className="w-5 h-5 mr-2" />
-              {loading ? 'Creating Account...' : 'Create Account'}
+              <UserPlus className="w-5 h-5 mr-2 animate-bounce" />
+              {loading ? 'Creating Account... ✨' : 'Create Account 🎉'}
             </Button>
           </form>
-
-          {/* Debug info - remove in production */}
-          <div className="p-2 bg-green-100 rounded text-xs mt-4">
-            <p>Debug Info:</p>
-            <p>Email: {email}</p>
-            <p>Name: {name}</p>
-            <p>Current Step: {step}</p>
-          </div>
         </div>
       </div>
     );
