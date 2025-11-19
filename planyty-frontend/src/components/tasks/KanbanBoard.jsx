@@ -1,98 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, X, CheckCircle } from 'lucide-react';
 import TaskCard from './TaskCard';
 import TaskForm from './TaskForm';
+import TaskDetailModal from './TaskDetailModal';
 
-const KanbanBoard = ({ projectId, onCompletedTasksUpdate }) => {
+const KanbanBoard = ({ projectId, completedTasks, onTaskComplete, onTaskUpdate }) => {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState(null);
-
-  const [columns, setColumns] = useState([
-    {
-      id: 1,
-      title: 'To Do',
-      tasks: [
-        {
-          id: 1,
-          title: 'Design login page',
-          priority: 'High',
-          tags: ['UI', 'Design'],
-          description: 'Create UI design for login page',
-          assignee: 'Me',
-          dueDate: 'N/A'
-        },
-        {
-          id: 2,
-          title: 'Setup project structure',
-          priority: 'Medium',
-          tags: ['Dev', 'Setup'],
-          description: 'Initialize project with proper folder structure',
-          assignee: 'Me',
-          dueDate: 'N/A'
-        }
-      ]
-    },
-    {
-      id: 2,
-      title: 'In Progress',
-      tasks: [
-        {
-          id: 3,
-          title: 'Implement user authentication',
-          priority: 'High',
-          tags: ['Dev', 'Auth'],
-          description: 'Set up user login and registration system',
-          assignee: 'Me',
-          dueDate: 'N/A'
-        }
-      ]
-    },
-    {
-      id: 3,
-      title: 'Review',
-      tasks: [
-        {
-          id: 4,
-          title: 'Refactor API service layer',
-          priority: 'Medium',
-          tags: ['Dev', 'Refactor'],
-          description: 'Improve API service structure and error handling',
-          assignee: 'Me',
-          dueDate: 'N/A'
-        }
-      ]
-    },
-    {
-      id: 4,
-      title: 'Done',
-      tasks: [
-        {
-          id: 5,
-          title: 'Initial Tailwind setup',
-          priority: 'Low',
-          tags: ['Setup'],
-          description: 'Set up Tailwind CSS configuration',
-          assignee: 'Me',
-          dueDate: 'N/A',
-          completedAt: '2024-01-15'
-        }
-      ]
-    }
-  ]);
-
-  // Update completed tasks when columns change
-  useEffect(() => {
-    if (onCompletedTasksUpdate) {
-      const doneColumn = columns.find(col => col.title === 'Done');
-      if (doneColumn) {
-        onCompletedTasksUpdate(doneColumn.tasks);
-      }
-    }
-  }, [columns, onCompletedTasksUpdate]);
+  const [editingColumnId, setEditingColumnId] = useState(null);
+  const [columns, setColumns] = useState([]);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [showTaskDetail, setShowTaskDetail] = useState(false);
+  const titleInputRef = useRef(null);
 
   const handleAddTaskClick = (columnId) => {
     setSelectedColumn(columnId);
     setShowTaskForm(true);
+  };
+
+  const handleTaskClick = (task) => {
+    setSelectedTask(task);
+    setShowTaskDetail(true);
+  };
+
+  const handleTaskUpdateFromModal = (updatedTask) => {
+    handleUpdateTask(updatedTask);
+    setSelectedTask(updatedTask);
+    if (onTaskUpdate) {
+      onTaskUpdate(updatedTask);
+    }
   };
 
   const handleTaskSubmit = (taskData) => {
@@ -101,7 +37,9 @@ const KanbanBoard = ({ projectId, onCompletedTasksUpdate }) => {
         const newTask = {
           id: Date.now(),
           ...taskData,
-          projectId: projectId
+          projectId: projectId,
+          subtasks: [],
+          status: 'not yet begun',
         };
         return {
           ...column,
@@ -136,46 +74,58 @@ const KanbanBoard = ({ projectId, onCompletedTasksUpdate }) => {
     setColumns(updatedColumns);
   };
 
-  const handleTaskComplete = (columnId, taskId) => {
-    // If task is already in Done column, do nothing
-    const sourceColumn = columns.find(col => col.id === columnId);
-    if (sourceColumn.title === 'Done') {
-      return;
-    }
-
-    // Find the task to complete
-    const taskToComplete = sourceColumn.tasks.find(task => task.id === taskId);
-    if (!taskToComplete) return;
-
-    // Create completed task with timestamp
-    const completedTask = {
-      ...taskToComplete,
-      completedAt: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      })
+  const handleUpdateTask = (updatedTask) => {
+    const updateTaskInTree = (tasks, updatedTask) => {
+      return tasks.map(task => {
+        if (task.id === updatedTask.id) {
+          return updatedTask;
+        }
+        if (task.subtasks && task.subtasks.length > 0) {
+          return {
+            ...task,
+            subtasks: updateTaskInTree(task.subtasks, updatedTask),
+          };
+        }
+        return task;
+      });
     };
 
-    // Update columns - remove from source, add to Done
+    const updatedColumns = columns.map(column => ({
+      ...column,
+      tasks: updateTaskInTree(column.tasks, updatedTask),
+    }));
+    setColumns(updatedColumns);
+  };
+
+  const handleTaskComplete = (columnId, taskId) => {
     const updatedColumns = columns.map(column => {
-      if (column.title === 'Done') {
-        // Add to Done column
-        return {
-          ...column,
-          tasks: [...column.tasks, completedTask]
-        };
-      } else if (column.id === columnId) {
-        // Remove from source column
-        const filteredTasks = column.tasks.filter(task => task.id !== taskId);
-        return {
-          ...column,
-          tasks: filteredTasks
-        };
+      if (column.id === columnId) {
+        const updatedTasks = column.tasks.map(task => {
+          if (task.id === taskId) {
+            const isCurrentlyCompleted = task.status === 'completed';
+            const updatedTask = {
+              ...task,
+              status: isCurrentlyCompleted ? 'not yet begun' : 'completed',
+              completedAt: isCurrentlyCompleted ? null : new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              })
+            };
+            
+            // Notify parent component about task completion status change
+            if (onTaskComplete) {
+              onTaskComplete(updatedTask);
+            }
+            return updatedTask;
+          }
+          return task;
+        });
+        return { ...column, tasks: updatedTasks };
       }
       return column;
     });
-
+    
     setColumns(updatedColumns);
   };
 
@@ -183,9 +133,34 @@ const KanbanBoard = ({ projectId, onCompletedTasksUpdate }) => {
     const newSection = {
       id: Date.now(),
       title: 'New Section',
-      tasks: []
+      tasks: [],
     };
     setColumns([...columns, newSection]);
+    setEditingColumnId(newSection.id);
+  };
+
+  useEffect(() => {
+    if (editingColumnId && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [editingColumnId]);
+
+  const handleSectionNameChange = (e, columnId) => {
+    const updatedColumns = columns.map(column =>
+      column.id === columnId ? { ...column, title: e.target.value } : column
+    );
+    setColumns(updatedColumns);
+  };
+
+  const handleSectionNameBlur = () => {
+    setEditingColumnId(null);
+  };
+
+  const handleSectionNameKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      setEditingColumnId(null);
+    }
   };
 
   const handleDeleteSection = (sectionId) => {
@@ -219,18 +194,8 @@ const KanbanBoard = ({ projectId, onCompletedTasksUpdate }) => {
         const sourceColumn = columns.find(col => col.id === sourceColumnId);
         const movedTask = sourceColumn.tasks.find(task => task.id === taskId);
         
-        // If moving to Done column, add completion timestamp
-        const targetColumn = columns.find(col => col.id === targetColumnId);
-        const taskWithCompletion = targetColumn.title === 'Done' ? {
-          ...movedTask,
-          completedAt: new Date().toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          })
-        } : movedTask;
-
-        return { ...column, tasks: [...column.tasks, taskWithCompletion] };
+        // Keep the task's completion status when moving between columns
+        return { ...column, tasks: [...column.tasks, movedTask] };
       }
       return column;
     });
@@ -253,15 +218,26 @@ const KanbanBoard = ({ projectId, onCompletedTasksUpdate }) => {
               <div className="bg-white rounded-xl h-full flex flex-col shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-gray-200 hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all duration-300">
                 {/* Column Header */}
                 <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-xl">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-purple-700 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
-                      {column.title}
-                    </h3>
-                    <span className={`text-sm px-2 py-1 rounded-full animate-pulse-slow ${
-                      column.title === 'Done' 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-purple-500 text-white'
-                    }`}>
+                  <div className="flex items-center gap-2 flex-1">
+                    {editingColumnId === column.id ? (
+                      <input
+                        ref={titleInputRef}
+                        type="text"
+                        value={column.title}
+                        onChange={(e) => handleSectionNameChange(e, column.id)}
+                        onBlur={handleSectionNameBlur}
+                        onKeyDown={handleSectionNameKeyDown}
+                        className="font-semibold text-purple-700 bg-transparent border-b-2 border-purple-500 focus:outline-none w-full"
+                      />
+                    ) : (
+                      <h3
+                        className="font-semibold text-purple-700 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient"
+                        onClick={() => setEditingColumnId(column.id)}
+                      >
+                        {column.title}
+                      </h3>
+                    )}
+                    <span className="text-sm px-2 py-1 rounded-full bg-purple-500 text-white animate-pulse-slow">
                       {column.tasks.length}
                     </span>
                   </div>
@@ -284,23 +260,25 @@ const KanbanBoard = ({ projectId, onCompletedTasksUpdate }) => {
                       onDragStart={(e) => handleDragStart(e, task.id, column.id)}
                     >
                       <div className="flex items-start gap-3">
-                        {/* Checkmark Button */}
+                        {/* Checkmark Button - Toggle completion */}
                         <button
                           onClick={() => handleTaskComplete(column.id, task.id)}
                           className={`mt-4 p-1 rounded-full transition-all duration-300 hover:scale-110 flex-shrink-0 ${
-                            column.title === 'Done' 
-                              ? 'bg-green-500 text-white cursor-default' 
+                            task.status === 'completed'
+                              ? 'bg-green-500 text-white hover:bg-green-600'
                               : 'bg-gray-200 hover:bg-green-200 text-gray-500 hover:text-green-600'
                           }`}
-                          title={column.title === 'Done' ? 'Completed' : 'Mark as complete'}
-                          disabled={column.title === 'Done'}
+                          title={task.status === 'completed' ? 'Mark as incomplete' : 'Mark as complete'}
                         >
                           <CheckCircle className="w-4 h-4" />
                         </button>
                         
                         {/* Task Card */}
-                        <div className="flex-1 min-w-0">
-                          <TaskCard task={task} isCompleted={column.title === 'Done'} />
+                        <div className="flex-1 min-w-0" onClick={() => handleTaskClick(task)}>
+                          <TaskCard
+                            task={task}
+                            isCompleted={task.status === 'completed'}
+                          />
                         </div>
                       </div>
                       
@@ -344,6 +322,18 @@ const KanbanBoard = ({ projectId, onCompletedTasksUpdate }) => {
         <TaskForm
           onClose={handleTaskFormClose}
           onSubmit={handleTaskSubmit}
+        />
+      )}
+
+      {/* Task Detail Modal */}
+      {showTaskDetail && selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          onClose={() => {
+            setShowTaskDetail(false);
+            setSelectedTask(null);
+          }}
+          onUpdateTask={handleTaskUpdateFromModal}
         />
       )}
     </>
