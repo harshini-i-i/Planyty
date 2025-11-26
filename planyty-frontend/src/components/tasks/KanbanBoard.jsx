@@ -4,7 +4,7 @@ import TaskCard from './TaskCard';
 import TaskForm from './TaskForm';
 import TaskDetailModal from './TaskDetailModal';
 
-const KanbanBoard = ({ projectId, completedTasks, onTaskComplete, onTaskUpdate }) => {
+const KanbanBoard = ({ projectId, completedTasks, onTaskComplete, onTaskUpdate, onTasksLoad }) => {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState(null);
   const [editingColumnId, setEditingColumnId] = useState(null);
@@ -12,6 +12,15 @@ const KanbanBoard = ({ projectId, completedTasks, onTaskComplete, onTaskUpdate }
   const [selectedTask, setSelectedTask] = useState(null);
   const [showTaskDetail, setShowTaskDetail] = useState(false);
   const titleInputRef = useRef(null);
+
+  // Add this useEffect to update parent with all tasks
+  useEffect(() => {
+    // Collect all tasks from all columns and send to parent
+    const allTasks = columns.flatMap(column => column.tasks);
+    if (onTasksLoad) {
+      onTasksLoad(allTasks);
+    }
+  }, [columns, onTasksLoad]);
 
   const handleAddTaskClick = (columnId) => {
     setSelectedColumn(columnId);

@@ -70,7 +70,7 @@ const Tasks = () => {
   const completedCount = allTasks.filter(task => task.status === 'completed').length;
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-[#EED5F0] via-white to-[#A067A3]">
+    <div className="h-full flex flex-col bg-gradient-to-br from-[#EED5F0] via-white to-[#A067A3] rounded-2xl shadow-2xl shadow-purple-200/50 overflow-hidden">
       {/* COMPACT HEADER */}
       <div className="flex-shrink-0 p-3 border-b border-gray-200 bg-white">
         <div className="flex items-center justify-between gap-4">

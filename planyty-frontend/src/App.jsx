@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AppProvider, useAppContext } from './contexts/AppContext';
+import { AppProvider } from './contexts/AppContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -16,8 +16,8 @@ import Meetings from './pages/Meetings';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import NotFound from './pages/NotFound';
-import Team from './pages/Team'; // Make sure this file exists
-import Settings from './pages/Settings'; // Make sure this file exists
+import Team from './pages/Team';
+import Settings from './pages/Settings';
 
 // Workspace Pages
 import Workspaces from './pages/workspaces/Workspaces';
@@ -29,6 +29,9 @@ import Projects from './pages/projects/Projects';
 import ProjectDetail from './pages/projects/ProjectDetail';
 import CreateProject from './pages/projects/CreateProject';
 
+// Import your new logo
+import logo from './assets/planytynewlogo.png';
+
 // ✅ Main Layout for authenticated users
 const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -38,21 +41,25 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-primary">
+    <div className="flex min-h-screen bg-gradient-to-br from-accent-300 to-pink-50">
       {/* Sidebar - Starts OPEN */}
       <Sidebar 
         isOpen={isSidebarOpen} 
         toggleSidebar={toggleSidebar}
       />
 
-      {/* Floating Logo Button - Only show when sidebar is CLOSED */}
+      {/* Floating Logo Button - Positioned properly relative to the floating header */}
       {!isSidebarOpen && (
         <button
           onClick={toggleSidebar}
-          className="fixed top-4 left-4 z-40 w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+          className="fixed top-6 left-6 z-40 p-2 bg-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border border-purple-200"
           title="Open Menu"
         >
-          <span className="text-white font-bold text-sm">P</span>
+          <img
+            src={logo}
+            alt="Planyty Logo"
+            className="w-8 h-8 object-contain"
+          />
         </button>
       )}
 
@@ -109,10 +116,10 @@ const AppRouter = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-primary">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dark mx-auto"></div>
-          <p className="mt-4 text-dark">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto"></div>
+          <p className="mt-4 text-purple-700">Loading...</p>
         </div>
       </div>
     );
