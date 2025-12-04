@@ -55,8 +55,8 @@ const AuthProviderContent = ({ children }) => {
     }
   };
 
-  // Step 2: Verify email with code (for Google flow)
-  const verifyEmail = async (email, code) => {
+  // Update verifyEmail function similarly
+  const verifyEmail = async (email, code, role = 'member') => {
     try {
       console.log('Verifying email:', email, 'with code:', code);
       
@@ -70,7 +70,7 @@ const AuthProviderContent = ({ children }) => {
           id: Date.now(),
           name: email.split('@')[0],
           email: email,
-          role: 'member',
+          role: role, // Add role here
           authMethod: 'google'
         };
         
@@ -88,9 +88,9 @@ const AuthProviderContent = ({ children }) => {
       throw error;
     }
   };
-
-  // Step 3: Complete signup with password (for email flow)
-  const completeSignup = async (name, password) => {
+  
+  // Update the completeSignup function
+  const completeSignup = async (name, password, role = 'member') => {
     try {
       const storedData = JSON.parse(localStorage.getItem('planyty_signup_temp') || '{}');
       console.log('Completing signup for:', storedData.email);
@@ -103,7 +103,7 @@ const AuthProviderContent = ({ children }) => {
         id: Date.now(),
         name: name,
         email: storedData.email,
-        role: 'member',
+        role: role, // Add role here
         authMethod: 'email'
       };
       
@@ -119,15 +119,23 @@ const AuthProviderContent = ({ children }) => {
     }
   };
 
+  // Update the login function
   const login = async (email, password) => {
     try {
       console.log('Login attempt:', email);
       
+      // For demo purposes, determine role based on email
+      let userRole = 'team_member';
+      if (email.includes('team_lead') || email.includes('lead') || email.includes('manager')) {
+        userRole = 'team_lead';
+      }
+      
       const userData = {
         id: Date.now(),
-        name: email.split('@')[0],
+        name: email.split('@')[0].replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
         email: email,
-        role: 'member'
+        role: userRole,
+        permissions: userRole === 'team_lead' ? ['create_teams', 'edit_teams', 'invite_members'] : []
       };
       
       setUser(userData);
@@ -138,13 +146,39 @@ const AuthProviderContent = ({ children }) => {
       throw error;
     }
   };
-
+  
   const logout = () => {
     setUser(null);
     localStorage.removeItem('planyty_user');
     localStorage.removeItem('planyty_signup_temp');
     console.log('User logged out');
     navigate('/signup');
+  };
+
+  // NEW: Role checking functions
+  const isTeamLead = () => {
+    return user?.role === 'team_lead';
+  };
+
+  const canCreateTeams = () => {
+    return isTeamLead();
+  };
+
+  const canEditTeams = () => {
+    return isTeamLead();
+  };
+
+  const canInviteMembers = (teamId = null) => {
+    if (!isTeamLead()) return false;
+    
+    // If teamId is provided, check if user is lead of that specific team
+    if (teamId) {
+      const teams = JSON.parse(localStorage.getItem('planyty_teams') || '[]');
+      const team = teams.find(t => t.id === teamId);
+      return team && (team.createdBy === user.id || team.leadId === user.id);
+    }
+    
+    return true;
   };
 
   const value = {
@@ -155,7 +189,12 @@ const AuthProviderContent = ({ children }) => {
     initiateSignup,
     verifyEmail,
     completeSignup,
-    signupData
+    signupData,
+    // NEW: Export role checking functions
+    isTeamLead,
+    canCreateTeams,
+    canEditTeams,
+    canInviteMembers
   };
 
   return (

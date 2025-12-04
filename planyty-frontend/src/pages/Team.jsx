@@ -4,7 +4,7 @@ import { TeamManagement } from '../components/teams';
 
 const Team = () => {
   return (
-    <div className="p-6">
+    <div className="p-1">
       <TeamManagement />
     </div>
   );

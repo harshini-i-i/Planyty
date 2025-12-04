@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Filter, PieChart, ArrowRight } from 'lucide-react';
+import { Filter, PieChart, ArrowRight, Crown, Users } from 'lucide-react';
 
 const StatCard = ({ title, value, filter, onSeeAll }) => (
   <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] hover:scale-105 transition-all duration-300">
@@ -258,7 +258,8 @@ const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const projects = [
+  // Team Lead sees ALL projects
+  const allProjects = [
     { id: 1, name: 'E-commerce Platform', progress: 75, status: 'in-progress', priority: 'high' },
     { id: 2, name: 'Mobile App', progress: 30, status: 'in-progress', priority: 'high' },
     { id: 3, name: 'Marketing Campaign', progress: 90, status: 'completed', priority: 'medium' },
@@ -268,6 +269,16 @@ const Dashboard = () => {
     { id: 7, name: 'Customer Portal', progress: 60, status: 'in-progress', priority: 'high' },
     { id: 8, name: 'Documentation', progress: 85, status: 'review', priority: 'low' },
   ];
+
+  // Team Member sees only their projects
+  const teamMemberProjects = [
+    { id: 1, name: 'E-commerce Platform', progress: 75, status: 'in-progress', priority: 'high' },
+    { id: 3, name: 'Marketing Campaign', progress: 90, status: 'completed', priority: 'medium' },
+    { id: 6, name: 'Product Research', progress: 20, status: 'planning', priority: 'low' },
+  ];
+
+  // Use different projects based on role
+  const projects = user?.role === 'team_lead' ? allProjects : teamMemberProjects;
 
   const totalProjects = projects.length;
   const completedProjects = projects.filter(p => p.status === 'completed').length;
@@ -323,8 +334,22 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#EED5F0] via-white to-[#A067A3] p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Projects Dashboard</h1>
-        <p className="text-gray-600 text-lg">Welcome back, {user?.name || 'User'}! Overview of all your projects</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Projects Dashboard</h1>
+            <p className="text-gray-600 text-lg">Welcome back, {user?.name || 'User'}! Overview of all your projects</p>
+          </div>
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+            user?.role === 'team_lead' 
+              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' 
+              : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
+          }`}>
+            {user?.role === 'team_lead' ? <Crown className="w-5 h-5" /> : <Users className="w-5 h-5" />}
+            <span className="font-semibold">
+              {user?.role === 'team_lead' ? 'Team Lead' : 'Team Member'}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

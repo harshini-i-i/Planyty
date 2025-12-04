@@ -1,6 +1,5 @@
-// Export all team components from one file
+// src/components/teams/index.js
+
 export { default as TeamManagement } from './TeamManagement';
 export { default as TeamCard } from './TeamCard';
 export { default as InviteModal } from './InviteModal';
-export { default as TeamMembers } from './TeamMembers';
-export { default as TeamProjects } from './TeamProjects';

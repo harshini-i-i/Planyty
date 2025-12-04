@@ -1,26 +1,59 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 
-// Create a socket context (no backend, just mock)
 const SocketContext = createContext();
 
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
-  // Fake socket state — no real backend
-  const [socket, setSocket] = useState(null);
-  const [isConnected, setIsConnected] = useState(true); // pretend always connected
+  const [isConnected, setIsConnected] = useState(true); // always connected in mock mode
 
-  useEffect(() => {
-    console.log("🟢 Mock Socket Active — Frontend-only mode (no backend).");
-    // No real connection needed
-  }, []);
+  // Store listeners like a real socket.io client
+  const listeners = useRef({});
 
-  const value = {
-    socket,
-    isConnected,
-    emit: () => console.log("Mock emit called."),
-    on: () => console.log("Mock on listener attached."),
+  // Mock socket object — behaves like real socket.io
+  const socket = {
+    on: (event, callback) => {
+      listeners.current[event] = callback;
+    },
+    off: (event) => {
+      delete listeners.current[event];
+    },
+    emit: (event, data) => {
+      console.log("📤 Mock emit:", event, data);
+
+      // Simulate backend behavior for message sending
+      if (event === "sendMessage") {
+        setTimeout(() => {
+          const incoming = {
+            sender: "MockUser",
+            text: data.text,
+            chatId: data.chatId,
+            createdAt: new Date(),
+          };
+
+          // Trigger listener if exists
+          if (listeners.current["chatMessage"]) {
+            listeners.current["chatMessage"](incoming);
+          }
+        }, 800);
+      }
+
+      // Simulate typing event
+      if (event === "typing") {
+        if (listeners.current["typing"]) {
+          listeners.current["typing"](data);
+        }
+      }
+    },
   };
 
-  return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;
+  useEffect(() => {
+    console.log("🟢 Mock Socket Active — No backend needed.");
+  }, []);
+
+  return (
+    <SocketContext.Provider value={{ socket, isConnected }}>
+      {children}
+    </SocketContext.Provider>
+  );
 };

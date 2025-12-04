@@ -1,45 +1,21 @@
+// src/components/notifications/NotificationsModule.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, CheckCircle } from 'lucide-react';
+import { useNotifications } from '../../contexts/NotificationContext'; // Fixed import path
 
 const NotificationsModule = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [emailFrequency, setEmailFrequency] = useState('instantly');
   const [desktopNotifications, setDesktopNotifications] = useState(true);
   const dropdownRef = useRef(null);
 
-  // Sample notifications data
-  const sampleNotifications = [
-    {
-      id: 1,
-      title: 'Task Completed',
-      message: 'Your task "Design Review" has been completed',
-      timestamp: '5 min ago',
-      read: false,
-      type: 'task'
-    },
-    {
-      id: 2,
-      title: 'New Message',
-      message: 'You have a new message from John Doe',
-      timestamp: '1 hour ago',
-      read: true,
-      type: 'message'
-    },
-    {
-      id: 3,
-      title: 'Meeting Reminder',
-      message: 'Team meeting starts in 30 minutes',
-      timestamp: '2 hours ago',
-      read: false,
-      type: 'meeting'
-    }
-  ];
-
-  useEffect(() => {
-    setNotifications(sampleNotifications);
-  }, []);
+  const { 
+    notifications, 
+    markAsRead, 
+    markAllAsRead, 
+    getUnreadCount 
+  } = useNotifications(); // Using the hook
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -56,23 +32,6 @@ const NotificationsModule = () => {
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
-  };
-
-  const markAsRead = (id) => {
-    setNotifications(notifications.map(notification =>
-      notification.id === id ? { ...notification, read: true } : notification
-    ));
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(notification => ({
-      ...notification,
-      read: true
-    })));
-  };
-
-  const getUnreadCount = () => {
-    return notifications.filter(notification => !notification.read).length;
   };
 
   const filteredNotifications = showUnreadOnly
@@ -190,9 +149,9 @@ const NotificationsModule = () => {
             )}
           </div>
 
-          {/* Footer - MUCH CLOSER spacing */}
+          {/* Footer */}
           <div className="p-4 border-t border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 rounded-b-lg">
-            <div className="space-y-2"> {/* Reduced from space-y-3 to space-y-2 */}
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-purple-700">Email frequency</span>
                 <select
@@ -218,8 +177,6 @@ const NotificationsModule = () => {
                   <div className="w-8 h-4 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-600"></div>
                 </label>
               </div>
-              
-              
             </div>
           </div>
         </div>

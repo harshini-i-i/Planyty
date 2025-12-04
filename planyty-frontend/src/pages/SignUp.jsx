@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { Mail, Lock, User, UserPlus, LogIn, ArrowLeft, Sparkles, Key, Shield } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, LogIn, ArrowLeft, Sparkles, Key, Shield, Users, Crown } from 'lucide-react';
 
 const SignUp = () => {
   const [step, setStep] = useState('email');
@@ -12,6 +12,7 @@ const SignUp = () => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState(''); // 'team_lead' or 'team_member'
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [authMethod, setAuthMethod] = useState('');
@@ -33,18 +34,24 @@ const SignUp = () => {
       const result = await initiateSignup(email, method);
       
       if (method === 'google') {
-        setStep('verify');
+        setStep('role');
       } else {
-        setStep('password');
+        setStep('role');
       }
     } catch (err) {
-      if (method === 'google') {
-        setStep('verify');
-      } else {
-        setStep('password');
-      }
+      // For demo purposes, continue even if there's an error
+      setStep('role');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRoleSelection = (selectedRole) => {
+    setRole(selectedRole);
+    if (authMethod === 'google') {
+      setStep('verify');
+    } else {
+      setStep('password');
     }
   };
 
@@ -59,7 +66,7 @@ const SignUp = () => {
     setLoading(true);
 
     try {
-      const result = await verifyEmail(email, verificationCode);
+      const result = await verifyEmail(email, verificationCode, role);
       
       if (result.success) {
         navigate('/dashboard');
@@ -86,7 +93,7 @@ const SignUp = () => {
     setLoading(true);
 
     try {
-      const result = await completeSignup(name, password);
+      const result = await completeSignup(name, password, role);
       
       if (result.success) {
         navigate('/dashboard');
@@ -100,6 +107,9 @@ const SignUp = () => {
 
   const goBack = () => {
     if (step === 'verify' || step === 'password') {
+      setStep('role');
+      setError('');
+    } else if (step === 'role') {
       setStep('email');
       setError('');
     }
@@ -175,7 +185,75 @@ const SignUp = () => {
     );
   }
 
-  // Step 2: Verification (Google flow)
+  // Step 2: Role Selection
+  if (step === 'role') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#EED5F0] via-white to-[#A067A3] p-6">
+        <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl border border-gray-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all duration-500 animate-slide-in-right">
+          <button
+            type="button"
+            onClick={goBack}
+            className="flex items-center text-gray-600 hover:text-purple-600 transition-all duration-300 hover:scale-105 mb-4 animate-fade-in"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
+          </button>
+
+          <div className="text-center animate-bounce-in">
+            <Users className="w-12 h-12 text-purple-500 mx-auto mb-4 animate-bounce" />
+            <h2 className="text-2xl font-bold text-gray-800 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
+              Choose Your Role
+            </h2>
+            <p className="text-gray-600 mt-2">
+              How will you use Planyty?
+            </p>
+          </div>
+
+          <div className="space-y-4 animate-stagger">
+            <button
+              onClick={() => handleRoleSelection('team_lead')}
+              className="w-full p-6 text-left bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-2 border-purple-200 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg"
+            >
+              <div>
+                <h3 className="font-bold text-gray-800 text-lg">Team Lead</h3>
+                <p className="text-sm text-gray-600 mt-2">
+                  Create teams, manage projects, and oversee team activities
+                </p>
+                <div className="flex flex-wrap gap-1 mt-3">
+                  <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">Create Teams</span>
+                  <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">Manage Projects</span>
+                  <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">Assign Tasks</span>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleRoleSelection('team_member')}
+              className="w-full p-6 text-left bg-gradient-to-r from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 border-2 border-blue-200 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg"
+            >
+              <div>
+                <h3 className="font-bold text-gray-800 text-lg">Team Member</h3>
+                <p className="text-sm text-gray-600 mt-2">
+                  Join teams, work on tasks, and collaborate with your team
+                </p>
+                <div className="flex flex-wrap gap-1 mt-3">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">Join Teams</span>
+                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">Work on Tasks</span>
+                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">Collaborate</span>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <div className="text-center text-sm text-gray-500 animate-fade-in delay-500">
+            <p>You can always change your role later in settings</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 3: Verification (Google flow)
   if (step === 'verify') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#EED5F0] via-white to-[#A067A3] p-6">
@@ -197,7 +275,15 @@ const SignUp = () => {
             <p className="text-gray-600 mt-2">
               We sent a verification code to <strong className="text-purple-600 animate-pulse">{email}</strong>
             </p>
-            <p className="text-sm text-gray-500 mt-1 animate-fade-in">
+            <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <p className="text-sm text-purple-700">
+                <strong>Role Selected:</strong> 
+                <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs capitalize">
+                  {role === 'team_lead' ? 'Team Lead 👑' : 'Team Member 👥'}
+                </span>
+              </p>
+            </div>
+            <p className="text-sm text-gray-500 mt-3 animate-fade-in">
               Demo code: <strong className="text-purple-600">123456</strong>
             </p>
           </div>
@@ -230,7 +316,7 @@ const SignUp = () => {
               disabled={loading}
             >
               <Shield className="w-5 h-5 mr-2 animate-bounce" />
-              {loading ? 'Verifying... 🔒' : 'Verify & Continue 🚀'}
+              {loading ? 'Verifying... 🔒' : `Verify & Continue as ${role === 'team_lead' ? 'Team Lead 👑' : 'Team Member 👥'}`}
             </Button>
           </form>
         </div>
@@ -238,7 +324,7 @@ const SignUp = () => {
     );
   }
 
-  // Step 3: Password setup (Email flow)
+  // Step 4: Password setup (Email flow)
   if (step === 'password') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#EED5F0] via-white to-[#A067A3] p-6">
@@ -260,6 +346,14 @@ const SignUp = () => {
             <p className="text-gray-600 mt-2">
               Setting up account for <strong className="text-purple-600 animate-pulse">{email}</strong>
             </p>
+            <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <p className="text-sm text-purple-700">
+                <strong>Role Selected:</strong> 
+                <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs capitalize">
+                  {role === 'team_lead' ? 'Team Lead 👑' : 'Team Member 👥'}
+                </span>
+              </p>
+            </div>
           </div>
 
           {error && (
@@ -318,9 +412,13 @@ const SignUp = () => {
               disabled={loading}
             >
               <UserPlus className="w-5 h-5 mr-2 animate-bounce" />
-              {loading ? 'Creating Account... ✨' : 'Create Account 🎉'}
+              {loading ? 'Creating Account... ✨' : `Create ${role === 'team_lead' ? 'Team Lead' : 'Team Member'} Account `}
             </Button>
           </form>
+
+          <div className="text-center text-sm text-gray-500 animate-fade-in delay-500">
+            <p>Your role determines your permissions and dashboard view</p>
+          </div>
         </div>
       </div>
     );

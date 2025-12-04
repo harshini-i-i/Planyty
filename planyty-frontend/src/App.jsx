@@ -1,8 +1,10 @@
+// src/App.jsx (updated with NotificationProvider)
 import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext'; // Added this
 
 // Layout Components
 import Header from './components/Header';
@@ -149,7 +151,9 @@ const App = () => (
   <AuthProvider>
     <AppProvider>
       <SocketProvider>
-        <AppRouter />
+        <NotificationProvider> {/* Wrap with NotificationProvider */}
+          <AppRouter />
+        </NotificationProvider>
       </SocketProvider>
     </AppProvider>
   </AuthProvider>
