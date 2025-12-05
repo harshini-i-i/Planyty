@@ -1,9 +1,8 @@
-// src/components/chat/index.jsx (updated to use notifications)
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ChatSidebar from './ChatSidebar';
 import ChatMessages from './ChatMessages';
-import { useSocket } from '../../contexts/SocketContext';
-import { useNotifications } from '../../contexts/NotificationContext'; 
+import { useNotifications } from '../../contexts/NotificationContext';
+import { FakeServer } from '../../fake-backend/fakeServer';
 
 const Chat = () => {
   const [activeTab, setActiveTab] = useState('channels');
@@ -11,104 +10,133 @@ const Chat = () => {
   const [activeTeam, setActiveTeam] = useState(null);
   const [messages, setMessages] = useState({});
   const [teams, setTeams] = useState([]);
-  const [socketStatus, setSocketStatus] = useState('connecting');
+  const [socketStatus, setSocketStatus] = useState('connected');
+  const [channels, setChannels] = useState([]);
   
-  const { socket, isConnected } = useSocket();
-  const { addNotification } = useNotifications(); // Use the notification context
+  // Use refs to track message IDs to prevent duplicates
+  const processedMessageIds = useRef(new Set());
+  const isSendingMessage = useRef(false);
 
-  // Initialize mock messages for different chats
+  const { addNotification } = useNotifications();
+
+  // Initialize channels, teams, and initial messages
   useEffect(() => {
-    const mockMessages = {
-      'general': [
-        { id: 1, sender: 'System', text: 'Welcome to the #general channel!', timestamp: '2024-01-15T09:00:00Z', type: 'system' },
-        { id: 2, sender: 'John Doe', text: 'Good morning everyone! Ready for the standup?', timestamp: '2024-01-15T09:15:00Z', type: 'text' },
-        { id: 3, sender: 'You', text: 'Morning! I have the task board ready for review.', timestamp: '2024-01-15T09:16:00Z', type: 'text' },
-        { id: 4, sender: 'Jane Smith', text: 'Design system updates are complete 🎨', timestamp: '2024-01-15T09:20:00Z', type: 'text' },
-      ],
-      'design': [
-        { id: 1, sender: 'Jane Smith', text: 'New design mockups are ready for feedback', timestamp: '2024-01-15T10:00:00Z', type: 'text' },
-        { id: 2, sender: 'You', text: 'The color scheme looks great! What about mobile responsiveness?', timestamp: '2024-01-15T10:05:00Z', type: 'text' },
-      ],
-      'frontend-team': [
-        { id: 1, sender: 'John Doe', text: 'Let\'s sync on the React migration plan', timestamp: '2024-01-15T11:00:00Z', type: 'text' },
-        { id: 2, sender: 'You', text: 'I\'ve prepared the migration roadmap doc', timestamp: '2024-01-15T11:05:00Z', type: 'text', read: true },
-      ],
-      'dm_john': [
-        { id: 1, sender: 'John Doe', text: 'Hey, can you review my PR when you get a chance?', timestamp: '2024-01-15T14:00:00Z', type: 'text' },
-        { id: 2, sender: 'You', text: 'Sure, I\'ll take a look in 30 minutes', timestamp: '2024-01-15T14:02:00Z', type: 'text', read: true },
-      ],
-    };
+    // Load channels from fake backend
+    const loadedChannels = FakeServer.getChannels();
+    setChannels(loadedChannels);
     
-    setMessages(mockMessages);
+    // Load teams from fake backend
+    const loadedTeams = FakeServer.getTeams();
+    setTeams(loadedTeams);
     
-    // Initialize mock teams
-    setTeams([
-      {
-        id: 'frontend-team',
-        name: 'Frontend Team',
-        description: 'React & Frontend Development',
-        unread: 2,
-        online: 4,
-        members: 8,
-        created: '2024-01-10'
-      },
-      {
-        id: 'design-team',
-        name: 'Design Team',
-        description: 'UI/UX Design Discussions',
-        unread: 0,
-        online: 3,
-        members: 5,
-        created: '2024-01-12'
-      }
-    ]);
+    // Initialize messages for all existing chats
+    const initialMessages = {};
+    
+    // Load messages for each channel
+    loadedChannels.forEach(channel => {
+      initialMessages[channel.id] = FakeServer.getMessages(channel.id);
+      // Track existing message IDs
+      initialMessages[channel.id].forEach(msg => {
+        processedMessageIds.current.add(msg.id);
+      });
+    });
+    
+    // Load messages for each team
+    loadedTeams.forEach(team => {
+      initialMessages[team.id] = FakeServer.getMessages(team.id);
+      // Track existing message IDs
+      initialMessages[team.id].forEach(msg => {
+        processedMessageIds.current.add(msg.id);
+      });
+    });
+    
+    // Add DMs
+    const dmIds = ['dm_john'];
+    dmIds.forEach(dmId => {
+      initialMessages[dmId] = FakeServer.getMessages(dmId);
+      initialMessages[dmId].forEach(msg => {
+        processedMessageIds.current.add(msg.id);
+      });
+    });
+    
+    setMessages(initialMessages);
   }, []);
 
+  // Simulate incoming messages from FakeServer
   useEffect(() => {
-    if (socket) {
-      setSocketStatus(isConnected ? 'connected' : 'disconnected');
+    let isMounted = true;
+    let lastMessageTime = Date.now();
+    
+    const simulateMessage = () => {
+      if (!isMounted) return;
+      if (isSendingMessage.current) return; // Don't simulate while user is sending
       
-      const handleMessage = (message) => {
-        const chatId = message.chatId || activeChannel;
-        setMessages(prev => ({
-          ...prev,
-          [chatId]: [...(prev[chatId] || []), {
-            id: Date.now(),
-            sender: message.sender,
-            text: message.text,
-            timestamp: new Date().toISOString(),
-            type: 'text'
-          }]
-        }));
-        
-        // Add notification for new message (only if not from current user)
-        if (message.sender !== 'You' && chatId !== activeChannel) {
-          addNotification({
-            title: `New message from ${message.sender}`,
-            message: message.text.length > 50 ? message.text.substring(0, 50) + '...' : message.text,
-            type: 'message'
-          });
+      const now = Date.now();
+      const timeSinceLastMessage = now - lastMessageTime;
+      
+      // Only simulate if it's been at least 8 seconds since last message
+      if (timeSinceLastMessage < 8000) return;
+      
+      const incoming = FakeServer.getRandomMessage(activeChannel);
+      
+      if (incoming && incoming.sender !== 'You') {
+        // Check if we've already processed this message ID
+        if (processedMessageIds.current.has(incoming.id)) {
+          return;
         }
-      };
-      
-      socket.on('chatMessage', handleMessage);
-      
-      return () => {
-        socket.off('chatMessage', handleMessage);
-      };
-    }
-  }, [socket, isConnected, activeChannel, addNotification]);
+        
+        processedMessageIds.current.add(incoming.id);
+        lastMessageTime = now;
+        
+        setMessages(prev => {
+          const currentMessages = prev[activeChannel] || [];
+          
+          return {
+            ...prev,
+            [activeChannel]: [...currentMessages, incoming]
+          };
+        });
 
-  const handleSendMessage = (messageData) => {
+        // Store in fake backend
+        FakeServer.addMessage(activeChannel, incoming);
+
+        // Add notification
+        addNotification({
+          title: `New message in #${activeChannel}`,
+          message: `${incoming.sender}: ${incoming.text.length > 50 ? incoming.text.substring(0, 50) + '...' : incoming.text}`,
+          type: 'message'
+        });
+      }
+    };
+
+    const interval = setInterval(() => {
+      simulateMessage();
+    }, 1000); // Check every second, but only send if conditions are met
+    
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [activeChannel, addNotification]);
+
+  const handleSendMessage = useCallback((messageData) => {
+    // Set sending flag to prevent simulated messages
+    isSendingMessage.current = true;
+    
+    const messageId = Date.now() + Math.random();
     const newMessage = {
-      id: Date.now(),
+      id: messageId,
       sender: 'You',
       text: messageData.text,
-      timestamp: messageData.timestamp,
-      type: messageData.type,
+      timestamp: messageData.timestamp || new Date().toISOString(),
+      type: messageData.type || 'text',
       file: messageData.file,
-      read: true
+      read: true,
+      replyTo: messageData.replyTo // Add replyTo data
     };
+
+    // Track this message ID
+    processedMessageIds.current.add(messageId);
 
     // Update local state
     setMessages(prev => ({
@@ -116,39 +144,107 @@ const Chat = () => {
       [activeChannel]: [...(prev[activeChannel] || []), newMessage]
     }));
 
-    // Send to socket if connected
-    if (socket && isConnected) {
-      socket.emit('sendMessage', {
-        chatId: activeChannel,
-        text: messageData.text,
-        type: messageData.type,
-        file: messageData.file
-      });
-    }
-  };
-
-  const handleNewChannel = (channelData) => {
-    console.log('Creating new channel:', channelData);
+    // Store in fake backend
+    FakeServer.addMessage(activeChannel, newMessage);
     
-    // Add notification instead of alert
-    addNotification({
-      title: 'Channel Created',
-      message: `Created ${channelData.private ? 'private' : 'public'} channel: #${channelData.name}`,
-      type: 'task'
-    });
-  };
+    // Clear sending flag after a delay
+    setTimeout(() => {
+      isSendingMessage.current = false;
+    }, 1000);
+  }, [activeChannel]);
 
-  const handleNewTeamChat = () => {
-    console.log('Creating new team chat');
+  // Add this function to handle message deletion
+  const handleDeleteMessage = useCallback((messageId, forEveryone = false) => {
+    setMessages(prev => {
+      const updated = { ...prev };
+      if (updated[activeChannel]) {
+        updated[activeChannel] = updated[activeChannel].filter(msg => msg.id !== messageId);
+      }
+      return updated;
+    });
+
+    FakeServer.deleteMessage(activeChannel, messageId, forEveryone);
+    
     addNotification({
-      title: 'Team Chat',
-      message: 'Create new team chat feature is coming soon!',
+      title: 'Message Deleted',
+      message: forEveryone ? 'Message deleted for everyone' : 'Message deleted for you',
       type: 'info'
     });
-  };
+  }, [activeChannel, addNotification]);
+
+  // Add this function to handle reactions
+  const handleAddReaction = useCallback((messageId, emoji) => {
+    setMessages(prev => {
+      const updated = { ...prev };
+      if (updated[activeChannel]) {
+        updated[activeChannel] = updated[activeChannel].map(msg => {
+          if (msg.id === messageId) {
+            const reactions = msg.reactions || {};
+            const userReaction = reactions[emoji] || [];
+            
+            if (userReaction.includes('You')) {
+              // Remove reaction
+              const updatedReaction = userReaction.filter(u => u !== 'You');
+              if (updatedReaction.length === 0) {
+                delete reactions[emoji];
+              } else {
+                reactions[emoji] = updatedReaction;
+              }
+            } else {
+              // Add reaction
+              reactions[emoji] = [...userReaction, 'You'];
+            }
+            
+            return { ...msg, reactions };
+          }
+          return msg;
+        });
+      }
+      return updated;
+    });
+
+    FakeServer.addReaction(activeChannel, messageId, emoji, 'You');
+  }, [activeChannel]);
+
+  const handleNewChannel = useCallback((channelData) => {
+    const newChannel = {
+      id: channelData.name.toLowerCase().replace(/\s+/g, '-'),
+      name: channelData.name,
+      private: channelData.private || false
+    };
+    
+    // Add to fake backend
+    const addedChannel = FakeServer.addChannel(newChannel);
+    
+    if (addedChannel) {
+      // Get updated channels list from FakeServer
+      const updatedChannels = FakeServer.getChannels();
+      setChannels(updatedChannels);
+      
+      // Initialize empty messages for new channel
+      setMessages(prev => ({
+        ...prev,
+        [addedChannel.id]: []
+      }));
+      
+      // Switch to new channel
+      setActiveChannel(addedChannel.id);
+      setActiveTab('channels');
+      setActiveTeam(null);
+      
+      addNotification({
+        title: 'Channel Created',
+        message: `Created ${channelData.private ? 'private' : 'public'} channel: #${channelData.name}`,
+        type: 'task'
+      });
+      
+      return true;
+    }
+    
+    return false;
+  }, [addNotification]);
 
   const handleNewDirectMessage = () => {
-    console.log('Starting new direct message');
     addNotification({
       title: 'Direct Message',
       message: 'Start new direct message feature is coming soon!',
@@ -156,98 +252,132 @@ const Chat = () => {
     });
   };
 
-  const handleChannelSelect = (channelId) => {
+  const handleChannelSelect = useCallback((channelId) => {
     setActiveChannel(channelId);
     setActiveTeam(null);
-  };
+    setActiveTab('channels');
+    
+    // Reset unread count for this channel
+    FakeServer.resetUnread(channelId);
+  }, []);
 
-  const handleTeamSelect = (teamId) => {
+  const handleTeamSelect = useCallback((teamId) => {
     setActiveChannel(teamId);
     setActiveTeam(teamId);
-  };
-
-  const handleCreateTeam = (teamData) => {
-    console.log('Creating new team:', teamData);
+    setActiveTab('teams');
     
-    // Create new team object with unique ID
+    // Reset unread count for this team
+    FakeServer.resetUnread(teamId);
+  }, []);
+
+  const handleCreateTeam = useCallback((teamData) => {
     const newTeam = {
       id: teamData.name.toLowerCase().replace(/\s+/g, '-'),
-      name: teamData.name,
-      description: teamData.description,
-      unread: 0,
-      online: 1,
-      members: 1,
-      created: new Date().toISOString().split('T')[0]
+      name: teamData.name
     };
     
-    // Add to teams array
-    setTeams(prev => [...prev, newTeam]);
+    // Add to fake backend
+    const addedTeam = FakeServer.addTeam(newTeam);
     
-    // Create initial messages for the new team
-    setMessages(prev => ({
-      ...prev,
-      [newTeam.id]: [
+    if (addedTeam) {
+      // Get updated teams list from FakeServer
+      const updatedTeams = FakeServer.getTeams();
+      setTeams(updatedTeams);
+      
+      // Initialize welcome messages for new team
+      const welcomeMessages = [
         {
-          id: 1,
+          id: Date.now() + Math.random(),
           sender: 'System',
-          text: `Welcome to the ${teamData.name} team chat! This is your dedicated space for team discussions.`,
+          text: `Welcome to the ${teamData.name} team chat!`,
           timestamp: new Date().toISOString(),
           type: 'system'
         },
         {
-          id: 2,
+          id: Date.now() + Math.random() + 1,
           sender: 'System',
-          text: teamData.description 
-            ? `Team description: ${teamData.description}`
-            : 'No description provided yet.',
+          text: teamData.description || 'No description provided.',
           timestamp: new Date().toISOString(),
           type: 'system'
         },
         {
-          id: 3,
+          id: Date.now() + Math.random() + 2,
           sender: 'You',
-          text: `Team "${teamData.name}" has been created! Start the conversation. 🎉`,
+          text: `Team "${teamData.name}" has been created!`,
           timestamp: new Date().toISOString(),
           type: 'text'
         }
-      ]
-    }));
+      ];
+      
+      // Track message IDs
+      welcomeMessages.forEach(msg => {
+        processedMessageIds.current.add(msg.id);
+      });
+      
+      setMessages(prev => ({
+        ...prev,
+        [addedTeam.id]: welcomeMessages
+      }));
+      
+      // Store in fake backend
+      welcomeMessages.forEach(msg => {
+        FakeServer.addMessage(addedTeam.id, msg);
+      });
+      
+      // Switch to new team
+      setActiveChannel(addedTeam.id);
+      setActiveTeam(addedTeam.id);
+      setActiveTab('teams');
+      
+      addNotification({
+        title: 'Team Created!',
+        message: `Team "${teamData.name}" has been created.`,
+        type: 'task'
+      });
+      
+      return true;
+    }
     
-    // Switch to the new team chat
-    setActiveChannel(newTeam.id);
-    setActiveTeam(newTeam.id);
-    
-    // Add success notification
-    addNotification({
-      title: 'Team Created Successfully!',
-      message: `Team "${teamData.name}" has been created. You've been added to the team chat.`,
-      type: 'task'
-    });
-  };
+    return false;
+  }, [addNotification]);
+
+  // Get unread counts for sidebar
+  const getUnreadCount = useCallback((chatId) => {
+    return FakeServer.getUnread(chatId);
+  }, []);
 
   return (
-    <div className="h-full flex bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <ChatSidebar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        activeChannel={activeChannel}
-        onChannelSelect={handleChannelSelect}
-        activeTeam={activeTeam}
-        onTeamSelect={handleTeamSelect}
-        onNewChannel={handleNewChannel}
-        onNewTeamChat={handleNewTeamChat}
-        onNewDirectMessage={handleNewDirectMessage}
-        teams={teams}
-        onCreateTeam={handleCreateTeam}
-      />
-      
-      <ChatMessages
-        currentChat={activeChannel}
-        messages={messages[activeChannel] || []}
-        onSendMessage={handleSendMessage}
-        socketStatus={socketStatus}
-        currentUser="You"
-      />
+    <div className="h-full flex flex-col bg-gradient-to-br from-[#EED5F0] via-white to-[#A067A3] rounded-2xl shadow-2xl shadow-purple-200/50 overflow-hidden">
+      <div className="h-full">
+        <div className="h-full flex bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          <ChatSidebar
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            activeChannel={activeChannel}
+            onChannelSelect={handleChannelSelect}
+            activeTeam={activeTeam}
+            onTeamSelect={handleTeamSelect}
+            onNewChannel={handleNewChannel}
+            onNewDirectMessage={handleNewDirectMessage}
+            channels={channels}
+            teams={teams}
+            onCreateTeam={handleCreateTeam}
+            getUnreadCount={getUnreadCount}
+          />
+          
+          <ChatMessages
+            currentChat={activeChannel}
+            messages={messages[activeChannel] || []}
+            onSendMessage={handleSendMessage}
+            onDeleteMessage={handleDeleteMessage} // ADD THIS
+            onAddReaction={handleAddReaction} // ADD THIS
+            socketStatus={socketStatus}
+            currentUser="You"
+            teams={teams}
+            channels={channels}
+          />
+        </div>
+      </div>
     </div>
   );
 };

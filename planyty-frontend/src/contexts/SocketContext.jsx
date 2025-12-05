@@ -1,58 +1,44 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useRef, useState } from "react";
+import { FakeServer } from "../fake-backend/fakeServer";
 
 const SocketContext = createContext();
-
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
-  const [isConnected, setIsConnected] = useState(true); // always connected in mock mode
-
-  // Store listeners like a real socket.io client
   const listeners = useRef({});
 
-  // Mock socket object — behaves like real socket.io
   const socket = {
-    on: (event, callback) => {
+    on(event, callback) {
       listeners.current[event] = callback;
     },
-    off: (event) => {
+
+    off(event) {
       delete listeners.current[event];
     },
-    emit: (event, data) => {
-      console.log("📤 Mock emit:", event, data);
 
-      // Simulate backend behavior for message sending
+    emit(event, data) {
+      console.log(`⚡ Fake Socket emit: ${event}`, data);
+
       if (event === "sendMessage") {
-        setTimeout(() => {
-          const incoming = {
-            sender: "MockUser",
-            text: data.text,
-            chatId: data.chatId,
-            createdAt: new Date(),
-          };
+        const msg = FakeServer.sendMessage(data.chatId, data.text, data.sender);
 
-          // Trigger listener if exists
+        setTimeout(() => {
           if (listeners.current["chatMessage"]) {
-            listeners.current["chatMessage"](incoming);
+            listeners.current["chatMessage"](msg);
           }
-        }, 800);
+        }, 600);
       }
 
-      // Simulate typing event
       if (event === "typing") {
         if (listeners.current["typing"]) {
           listeners.current["typing"](data);
         }
       }
-    },
+    }
   };
 
-  useEffect(() => {
-    console.log("🟢 Mock Socket Active — No backend needed.");
-  }, []);
-
   return (
-    <SocketContext.Provider value={{ socket, isConnected }}>
+    <SocketContext.Provider value={{ socket, isConnected: true }}>
       {children}
     </SocketContext.Provider>
   );

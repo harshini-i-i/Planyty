@@ -8,15 +8,19 @@ const WorkspaceCard = ({ workspace }) => {
     green: 'bg-green-500',
     purple: 'bg-purple-500',
     orange: 'bg-orange-500',
-    red: 'bg-red-500'
+    red: 'bg-red-500',
+    pink: 'bg-pink-500',
+    indigo: 'bg-indigo-500'
   };
+
+  const bgColor = colorMap[workspace.color] || 'bg-blue-500';
 
   return (
     <Link to={`/workspaces/${workspace.id}`}>
-      <div className="p-6 bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow cursor-pointer h-full">
+      <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] hover:scale-105 transition-all duration-300 cursor-pointer h-full">
         <div className="flex items-start justify-between mb-4">
-          <div className={`p-3 rounded-full ${colorMap[workspace.color] || 'bg-blue-500'} bg-opacity-20`}>
-            <Folder className={`w-6 h-6 text-${workspace.color}-500`} />
+          <div className={`p-3 rounded-full ${bgColor} bg-opacity-20`}>
+            <Folder className={`w-6 h-6 ${bgColor.replace('bg-', 'text-')}`} />
           </div>
           <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
             {workspace.projectCount} Projects
