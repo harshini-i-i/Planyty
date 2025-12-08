@@ -8,7 +8,6 @@ const ReactionsModal = ({
   onAddReaction 
 }) => {
   const emojis = ['😀', '😍', '😂', '😮', '😢', '👍', '👎', '❤️', '🎉', '🔥'];
-
   const [selectedEmoji, setSelectedEmoji] = useState(null);
   const [showToast, setShowToast] = useState(false);
 
@@ -35,7 +34,6 @@ const ReactionsModal = ({
   }, [isOpen, onClose]);
 
   if (!isOpen || !message || !message.id) {
-    console.log('ReactionsModal not rendering:', { isOpen, message });
     return null;
   }
 
@@ -46,38 +44,42 @@ const ReactionsModal = ({
     
     if (onAddReaction && message && message.id) {
       onAddReaction(message.id, emoji);
-    } else {
-      console.error('Cannot add reaction: onAddReaction, message, or message.id is missing');
     }
     
     onClose();
   };
 
+  // Calculate position to stay in viewport
+  const modalWidth = emojis.length * 48; // Approximate width based on button count
+  const x = Math.min(position.x, window.innerWidth - modalWidth - 20);
+  const y = Math.max(20, Math.min(position.y, window.innerHeight - 100));
+
   return (
     <>
+      {/* Minimal Reactions Modal */}
       <div
-        className="fixed z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-2 flex items-center gap-1 reactions-modal"
+        className="reactions-modal fixed z-50 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg border border-purple-300/50 p-2 flex items-center gap-1"
         style={{
-          left: `${position.x}px`,
-          top: `${position.y}px`,
+          left: `${x}px`,
+          top: `${y}px`,
         }}
       >
         {emojis.map((emoji, index) => (
           <button
             key={index}
             onClick={() => handleEmojiClick(emoji)}
-            className="w-10 h-10 flex items-center justify-center text-xl hover:bg-gray-100 rounded-lg transition-transform hover:scale-125"
+            className="w-10 h-10 flex items-center justify-center text-xl bg-white/20 hover:bg-white/40 rounded-full transition-all duration-200 hover:scale-125 hover:shadow-md"
           >
             {emoji}
           </button>
         ))}
       </div>
 
-      {/* Floating confirmation toast at bottom-right */}
+      {/* Simple toast notification */}
       {showToast && selectedEmoji && (
-        <div className="fixed bottom-4 right-4 z-60 pointer-events-none">
-          <div className="bg-white rounded-full p-3 shadow-xl flex items-center justify-center text-2xl transform transition-all duration-300">
-            {selectedEmoji}
+        <div className="fixed bottom-6 right-6 z-60 pointer-events-none animate-bounce">
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-full p-3 shadow-lg flex items-center justify-center text-2xl">
+            <span className="text-white">{selectedEmoji}</span>
           </div>
         </div>
       )}

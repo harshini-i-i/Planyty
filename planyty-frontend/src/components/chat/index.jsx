@@ -13,6 +13,11 @@ const Chat = () => {
   const [socketStatus, setSocketStatus] = useState('connected');
   const [channels, setChannels] = useState([]);
   
+  // EDIT STATE MANAGEMENT
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editText, setEditText] = useState('');
+  
   // Use refs to track message IDs to prevent duplicates
   const processedMessageIds = useRef(new Set());
   const isSendingMessage = useRef(false);
@@ -191,11 +196,72 @@ const Chat = () => {
     };
   }, [activeChannel, addNotification]);
 
+  // UPDATED: Handle both sending new messages and editing existing ones
   const handleSendMessage = useCallback((messageData) => {
-    // Set sending flag to prevent simulated messages
+    // If we're in edit mode, update the message instead of sending new one
+    if (isEditMode && editingMessage) {
+      console.log('Updating message:', editingMessage.id, 'with text:', messageData.text);
+      
+      // Clear edit state first
+      const currentEditingMessage = editingMessage;
+      const currentEditText = messageData.text;
+      
+      setEditingMessage(null);
+      setIsEditMode(false);
+      setEditText('');
+      
+      // Update local state
+      setMessages(prev => {
+        const updated = { ...prev };
+        
+        if (!updated[activeChannel]) {
+          console.log('No messages in this channel:', activeChannel);
+          return updated;
+        }
+        
+        const messageIndex = updated[activeChannel].findIndex(msg => msg.id === currentEditingMessage.id);
+        
+        if (messageIndex === -1) {
+          console.log('Message not found for editing:', currentEditingMessage.id);
+          return updated;
+        }
+        
+        // Create a deep copy of the messages array
+        const newMessages = [...updated[activeChannel]];
+        const messageToUpdate = { ...newMessages[messageIndex] };
+        
+        // Update the message text and add edited flag
+        messageToUpdate.text = currentEditText;
+        messageToUpdate.edited = true;
+        messageToUpdate.editTimestamp = new Date().toISOString();
+        
+        newMessages[messageIndex] = messageToUpdate;
+        
+        console.log('Updated message in state:', messageToUpdate);
+        
+        return {
+          ...updated,
+          [activeChannel]: newMessages
+        };
+      });
+      
+      // Also update in FakeServer
+      FakeServer.editMessage(activeChannel, currentEditingMessage.id, currentEditText);
+      
+      // Add notification
+      addNotification({
+        title: 'Message Edited',
+        message: 'Your message has been updated',
+        type: 'info',
+        duration: 2000
+      });
+      
+      return;
+    }
+    
+    // Original send message logic for new messages
     isSendingMessage.current = true;
     
-    // Generate unique message ID with counter
     const messageId = `${Date.now()}-${messageCounter.current++}`;
     const newMessage = {
       id: messageId,
@@ -208,7 +274,7 @@ const Chat = () => {
       replyTo: messageData.replyTo
     };
 
-    console.log('Sending message with ID:', messageId);
+    console.log('Sending new message with ID:', messageId);
 
     // Track this message ID
     processedMessageIds.current.add(messageId);
@@ -226,7 +292,7 @@ const Chat = () => {
     setTimeout(() => {
       isSendingMessage.current = false;
     }, 1000);
-  }, [activeChannel]);
+  }, [activeChannel, isEditMode, editingMessage, addNotification]);
 
   const handleDeleteMessage = useCallback((messageId, forEveryone = false) => {
     if (!messageId) {
@@ -327,6 +393,83 @@ const Chat = () => {
     });
   }, [activeChannel, addNotification]);
 
+  // UPDATED: Start editing a message
+  const handleStartEditing = useCallback((message) => {
+    console.log('Starting edit for message:', message);
+    setEditingMessage(message);
+    setEditText(message.text);
+    setIsEditMode(true);
+    
+    // Add notification
+    addNotification({
+      title: 'Editing Message',
+      message: 'You are now editing your message',
+      type: 'info',
+      duration: 2000
+    });
+  }, [addNotification]);
+
+  // UPDATED: Cancel editing
+  const handleCancelEdit = useCallback(() => {
+    console.log('Canceling edit');
+    setEditingMessage(null);
+    setIsEditMode(false);
+    setEditText('');
+    
+    addNotification({
+      title: 'Edit Canceled',
+      message: 'Message editing canceled',
+      type: 'info',
+      duration: 2000
+    });
+  }, [addNotification]);
+
+  // UPDATED: Legacy edit function (for compatibility)
+  const handleEditMessage = useCallback((messageId, newText) => {
+    console.log('Editing message via function:', messageId, 'new text:', newText);
+    
+    setMessages(prev => {
+      const updated = { ...prev };
+      
+      if (!updated[activeChannel]) {
+        console.log('No messages in this channel:', activeChannel);
+        return updated;
+      }
+      
+      const messageIndex = updated[activeChannel].findIndex(msg => msg.id === messageId);
+      
+      if (messageIndex === -1) {
+        console.log('Message not found:', messageId);
+        return updated;
+      }
+      
+      const newMessages = [...updated[activeChannel]];
+      const messageToUpdate = { ...newMessages[messageIndex] };
+      
+      messageToUpdate.text = newText;
+      messageToUpdate.edited = true;
+      messageToUpdate.editTimestamp = new Date().toISOString();
+      
+      newMessages[messageIndex] = messageToUpdate;
+      
+      console.log('Updated message via function:', messageToUpdate);
+      
+      return {
+        ...updated,
+        [activeChannel]: newMessages
+      };
+    });
+    
+    FakeServer.editMessage(activeChannel, messageId, newText);
+    
+    addNotification({
+      title: 'Message Edited',
+      message: 'Your message has been updated',
+      type: 'info',
+      duration: 2000
+    });
+  }, [activeChannel, addNotification]);
+
   const handleNewChannel = useCallback((channelData) => {
     const newChannel = {
       id: channelData.name.toLowerCase().replace(/\s+/g, '-'),
@@ -353,6 +496,11 @@ const Chat = () => {
       setActiveTab('channels');
       setActiveTeam(null);
       
+      // Clear edit state when switching channels
+      setEditingMessage(null);
+      setIsEditMode(false);
+      setEditText('');
+      
       addNotification({
         title: 'Channel Created',
         message: `Created ${channelData.private ? 'private' : 'public'} channel: #${channelData.name}`,
@@ -374,6 +522,11 @@ const Chat = () => {
   };
 
   const handleChannelSelect = useCallback((channelId) => {
+    // Clear edit state when switching channels
+    setEditingMessage(null);
+    setIsEditMode(false);
+    setEditText('');
+    
     setActiveChannel(channelId);
     setActiveTeam(null);
     setActiveTab('channels');
@@ -383,6 +536,11 @@ const Chat = () => {
   }, []);
 
   const handleTeamSelect = useCallback((teamId) => {
+    // Clear edit state when switching channels
+    setEditingMessage(null);
+    setIsEditMode(false);
+    setEditText('');
+    
     setActiveChannel(teamId);
     setActiveTeam(teamId);
     setActiveTab('teams');
@@ -450,6 +608,11 @@ const Chat = () => {
       setActiveTeam(addedTeam.id);
       setActiveTab('teams');
       
+      // Clear edit state when switching channels
+      setEditingMessage(null);
+      setIsEditMode(false);
+      setEditText('');
+      
       addNotification({
         title: 'Team Created!',
         message: `Team "${teamData.name}" has been created.`,
@@ -492,10 +655,17 @@ const Chat = () => {
             onSendMessage={handleSendMessage}
             onDeleteMessage={handleDeleteMessage}
             onAddReaction={handleAddReaction}
+            onEditMessage={handleEditMessage}
+            onStartEditing={handleStartEditing}
+            onCancelEdit={handleCancelEdit}
             socketStatus={socketStatus}
             currentUser="You"
             teams={teams}
             channels={channels}
+            isEditMode={isEditMode}
+            editingMessage={editingMessage}
+            editText={editText}
+            setEditText={setEditText}
           />
         </div>
       </div>

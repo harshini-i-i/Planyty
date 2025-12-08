@@ -31,7 +31,9 @@ export const FakeServer = {
       sender, 
       text, 
       timestamp: new Date().toISOString(),
-      type: 'text'
+      type: 'text',
+      edited: false,
+      editHistory: []
     };
     if (!fakeDB.messages[chatId]) fakeDB.messages[chatId] = [];
     fakeDB.messages[chatId].push(msg);
@@ -80,6 +82,7 @@ export const FakeServer = {
   getUnread(chatId) {
     return fakeDB.unread[chatId] || 0;
   },
+  
 
   // FIXED: Get random message from different senders
   getRandomMessage(chatId) {
@@ -98,7 +101,9 @@ export const FakeServer = {
     return {
       ...message,
       id: Date.now() + Math.random(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      edited: false,
+      editHistory: []
     };
   },
 
@@ -177,7 +182,9 @@ export const FakeServer = {
       sender: randomSender,
       text: randomMessage,
       timestamp: new Date().toISOString(),
-      type: 'text'
+      type: 'text',
+      edited: false,
+      editHistory: []
     };
     
     // Store in fakeDB
@@ -199,7 +206,9 @@ export const FakeServer = {
     if (!existingMsg) {
       const messageWithId = {
         ...msg,
-        id: messageId
+        id: messageId,
+        edited: false,
+        editHistory: []
       };
       fakeDB.messages[chatId].push(messageWithId);
       
@@ -232,10 +241,67 @@ export const FakeServer = {
     
     return chatTypes[chatId] || { name: 'Unknown', description: 'No description', type: 'channel', members: 0 };
   },
-  // Add these methods to the FakeServer object (at the end, before the closing bracket)
 
-  // Add these methods to the FakeServer object
+  // EDIT MESSAGE FUNCTION
+  editMessage(chatId, messageId, newText, userId = "You") {
+    const chat = fakeDB.messages[chatId];
+    if (!chat) {
+      console.error(`Chat ${chatId} not found`);
+      return null;
+    }
+    
+    const message = chat.find(msg => msg.id === messageId);
+    if (!message) {
+      console.error(`Message ${messageId} not found in chat ${chatId}`);
+      return null;
+    }
+    
+    // Check if user is the sender (only sender can edit)
+    if (message.sender !== userId && userId !== "You") {
+      console.error(`User ${userId} is not authorized to edit this message`);
+      return null;
+    }
+    
+    // Save the original text to edit history
+    if (!message.editHistory) {
+      message.editHistory = [];
+    }
+    
+    // Add current state to history before editing
+    message.editHistory.push({
+      text: message.text,
+      timestamp: message.lastEdited || message.timestamp,
+      editedBy: message.sender
+    });
+    
+    // Update the message
+    const originalText = message.text;
+    message.text = newText;
+    message.edited = true;
+    message.lastEdited = new Date().toISOString();
+    
+    console.log(`Message edited from "${originalText}" to "${newText}"`);
+    
+    // Return the updated message
+    return {
+      ...message,
+      // Include the full edit history in the response
+      editHistory: [...message.editHistory]
+    };
+  },
 
+  // Get edit history for a message
+  getEditHistory(chatId, messageId) {
+    const chat = fakeDB.messages[chatId];
+    if (!chat) return [];
+    
+    const message = chat.find(msg => msg.id === messageId);
+    if (!message || !message.editHistory) return [];
+    
+    return [...message.editHistory];
+  },
+
+  // Delete message function
   deleteMessage(chatId, messageId, forEveryone = false) {
     const chat = fakeDB.messages[chatId];
     if (chat) {
@@ -256,6 +322,7 @@ export const FakeServer = {
     return true;
   },
 
+  // Add reaction function
   addReaction(chatId, messageId, emoji, userId) {
     const chat = fakeDB.messages[chatId];
     if (chat) {
@@ -283,5 +350,32 @@ export const FakeServer = {
       }
     }
     return null;
+  },
+
+  // Helper method to check if a message can be edited
+  canEditMessage(chatId, messageId, userId = "You") {
+    const chat = fakeDB.messages[chatId];
+    if (!chat) return false;
+    
+    const message = chat.find(msg => msg.id === messageId);
+    if (!message) return false;
+    
+    // Only sender can edit their own messages
+    return message.sender === userId || userId === "You";
+  },
+
+  // Helper method to check edit time limit (optional: add time limit for editing)
+  canEditWithinTimeLimit(chatId, messageId, timeLimitMinutes = 15) {
+    const chat = fakeDB.messages[chatId];
+    if (!chat) return false;
+    
+    const message = chat.find(msg => msg.id === messageId);
+    if (!message) return false;
+    
+    const messageTime = new Date(message.timestamp);
+    const currentTime = new Date();
+    const timeDiff = (currentTime - messageTime) / (1000 * 60); // Convert to minutes
+    
+    return timeDiff <= timeLimitMinutes;
   }
 };

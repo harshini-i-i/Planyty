@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Send, Paperclip, Smile, MoreVertical, Image as ImageIcon, FileText, Video, ChevronRight, Reply as ReplyIcon, X } from 'lucide-react';
+import { Send, Paperclip, Smile, MoreVertical, Image as ImageIcon, FileText, Video, ChevronRight, Reply as ReplyIcon, X, Check, Edit } from 'lucide-react';
 import { FakeServer } from '../../fake-backend/fakeServer';
 import TeamInfoModal from './modals/TeamInfoModal';
 import MessageActionsModal from './modals/MessageActionsModal';
@@ -7,16 +7,27 @@ import ReactionsModal from './modals/ReactionsModal';
 import DeleteConfirmationModal from './modals/DeleteConfirmationModal';
 import ForwardModal from './modals/ForwardModal';
 
+// Import EmojiMart components
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
+
 const ChatMessages = ({ 
   currentChat, 
   messages, 
   onSendMessage, 
   onDeleteMessage,
   onAddReaction,
+  onEditMessage,
+  onStartEditing, // ADD THIS PROP
+  onCancelEdit,   // ADD THIS PROP
   socketStatus,
   currentUser,
   teams = [],
-  channels = []
+  channels = [],
+  isEditMode,     // ADD THIS PROP
+  editingMessage, // ADD THIS PROP
+  editText,       // ADD THIS PROP
+  setEditText     // ADD THIS PROP
 }) => {
   const [newMessage, setNewMessage] = useState('');
   const [showTeamInfo, setShowTeamInfo] = useState(false);
@@ -47,6 +58,13 @@ const ChatMessages = ({
   });
   const [isReplying, setIsReplying] = useState(false);
   const [replyingMessage, setReplyingMessage] = useState(null);
+  
+  // REMOVED local edit state - using props from parent
+  
+  // Emoji picker state
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef(null);
+  const textareaRef = useRef(null);
 
   // Base chat info
   const baseChatInfo = {
@@ -151,6 +169,16 @@ const ChatMessages = ({
     scrollToBottom();
   }, [messages, simulatedMessages]);
 
+  // Focus textarea when edit mode changes
+  useEffect(() => {
+    if (isEditMode && textareaRef.current) {
+      setTimeout(() => {
+        textareaRef.current.focus();
+        textareaRef.current.select();
+      }, 100);
+    }
+  }, [isEditMode]);
+
   // Message simulation effect
   useEffect(() => {
     let isMounted = true;
@@ -197,23 +225,41 @@ const ChatMessages = ({
     };
   }, [currentChat, currentUser]);
 
+  // Close modals when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check emoji picker
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+      }
+      
+      // Check message actions modal
+      const isOutsideMessageActions = !event.target.closest('.message-actions-modal');
+      const isOutsideReactions = !event.target.closest('.reactions-modal');
+      
+      if (messageActions.isOpen && isOutsideMessageActions) {
+        setMessageActions({ ...messageActions, isOpen: false });
+      }
+      if (reactionsModal.isOpen && isOutsideReactions) {
+        setReactionsModal({ ...reactionsModal, isOpen: false });
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [messageActions, reactionsModal]);
+
   // ========== MESSAGE ACTION HANDLERS ==========
-const handleDoubleClick = (message, event, isCurrentUser) => {
-  console.log('Double click triggered on message:', message);
-  event.stopPropagation();
-  
-  if (!message || !message.id) {
-    console.error('Message or message.id is undefined:', message);
-    return;
-  }
-  
-  setMessageActions({
-    isOpen: true,
-    message,
-    position: { x: event.clientX, y: event.clientY },
-    isCurrentUser,
-  });
-};
+  const handleDoubleClick = (message, event, isCurrentUser) => {
+    event.stopPropagation();
+    setMessageActions({
+      isOpen: true,
+      message,
+      position: { x: event.clientX, y: event.clientY },
+      isCurrentUser,
+    });
+  };
+
   const handleCopy = async (text) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -229,9 +275,8 @@ const handleDoubleClick = (message, event, isCurrentUser) => {
     setMessageActions({ ...messageActions, isOpen: false });
     
     setTimeout(() => {
-      const input = document.querySelector('textarea');
-      if (input) {
-        input.focus();
+      if (textareaRef.current) {
+        textareaRef.current.focus();
       }
     }, 100);
   };
@@ -244,7 +289,7 @@ const handleDoubleClick = (message, event, isCurrentUser) => {
   const handleActualForward = (message, chatId) => {
     const forwardMessage = {
       ...message,
-      id: Date.now() + Math.random(),
+      id: `${Date.now()}-${Math.random()}`,
       timestamp: new Date().toISOString(),
       forwarded: true,
       originalSender: message.sender,
@@ -257,7 +302,7 @@ const handleDoubleClick = (message, event, isCurrentUser) => {
     
     FakeServer.addMessage(chatId, {
       ...forwardMessage,
-      id: Date.now() + Math.random() + 1
+      id: `${Date.now()}-${Math.random() + 1}`
     });
     
     setForwardModal({ ...forwardModal, isOpen: false });
@@ -278,88 +323,63 @@ const handleDoubleClick = (message, event, isCurrentUser) => {
     onDeleteMessage(messageId, forEveryone);
     setDeleteModal({ isOpen: false, messageId: null, forEveryone: false });
   };
-const handleReact = (message) => {
-  console.log('handleReact called with:', message);
-  
-  // Check if we're receiving an event object by mistake
-  if (message && typeof message.preventDefault === 'function') {
-    console.error('Received event object instead of message');
-    return;
-  }
-  
-  // Get the message from messageActions state instead
-  const currentMessage = messageActions.message;
-  
-  if (!currentMessage || !currentMessage.id) {
-    console.error('Cannot react: Message or message.id is missing', currentMessage);
-    return;
-  }
-  
-  console.log('Reacting to message:', currentMessage.id, currentMessage.text);
-  
-  setReactionsModal({
-    isOpen: true,
-    message: currentMessage,
-    position: { 
-      x: messageActions.position.x, 
-      y: messageActions.position.y - 50 
-    },
-  });
-  setMessageActions({ ...messageActions, isOpen: false });
-};
 
-const handleAddReaction = (messageId, emoji) => {
-  console.log('ChatMessages: Adding reaction to message:', messageId, 'emoji:', emoji);
-  
-  if (!messageId) {
-    console.error('Cannot add reaction: messageId is undefined');
-    return;
-  }
-  
-  if (onAddReaction) {
-    onAddReaction(messageId, emoji);
-  }
-  setReactionsModal({ ...reactionsModal, isOpen: false });
-};
-
-  const handleEdit = (message) => {
-    console.log('Edit message:', message);
+  const handleReact = (message) => {
+    if (!message || !message.id) {
+      console.error('Cannot react: Message or message.id is missing', message);
+      return;
+    }
+    
+    setReactionsModal({
+      isOpen: true,
+      message: message,
+      position: { 
+        x: messageActions.position.x, 
+        y: messageActions.position.y - 50 
+      },
+    });
+    
     setMessageActions({ ...messageActions, isOpen: false });
   };
 
- const handleSend = (e) => {
-  e.preventDefault();
-  if (!newMessage.trim()) return;
-
-  const msg = {
-    id: `${Date.now()}-${Math.random()}`, // Ensure ID is set
-    text: newMessage.trim(),
-    timestamp: new Date().toISOString(),
-    type: 'text',
-    sender: currentUser,
-    replyTo: replyingMessage ? {
-      id: replyingMessage.id,
-      sender: replyingMessage.sender,
-      text: replyingMessage.text
-    } : null
+  // UPDATED: EDIT HANDLER - Use parent's function
+  const handleEdit = (message) => {
+    console.log('Edit message called:', message);
+    
+    // Use parent's function to start editing
+    if (onStartEditing) {
+      onStartEditing(message);
+    }
+    
+    setMessageActions({ ...messageActions, isOpen: false });
   };
 
-  onSendMessage(msg);
-  FakeServer.addMessage(currentChat, msg);
-  setNewMessage('');
-  setReplyingMessage(null);
-  setIsReplying(false);
-};
+  // UPDATED: HANDLE SEND - SUPPORTS BOTH NEW MESSAGES AND EDITS
+  const handleSend = (e) => {
+    e.preventDefault();
+    
+    // If in edit mode, handle editing
+    if (isEditMode && editText.trim()) {
+      const msg = {
+        text: editText.trim(),
+        timestamp: new Date().toISOString(),
+        type: 'text',
+        sender: currentUser
+      };
+      
+      console.log('Sending edited message:', msg);
+      onSendMessage(msg);
+      return;
+    }
+    
+    // Original send logic for new messages
+    if (!newMessage.trim()) return;
 
-  const handleFileUpload = (e) => {
-  const file = e.target.files[0];
-  if (file) {
     const msg = {
-      id: `${Date.now()}-${Math.random()}`, // Ensure ID is set
-      text: `Uploaded file: ${file.name}`,
-      file,
+      id: `${Date.now()}-${Math.random()}`,
+      text: newMessage.trim(),
       timestamp: new Date().toISOString(),
-      type: 'file',
+      type: 'text',
       sender: currentUser,
       replyTo: replyingMessage ? {
         id: replyingMessage.id,
@@ -370,11 +390,45 @@ const handleAddReaction = (messageId, emoji) => {
 
     onSendMessage(msg);
     FakeServer.addMessage(currentChat, msg);
-    e.target.value = '';
+    setNewMessage('');
     setReplyingMessage(null);
     setIsReplying(false);
-  }
-};
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const msg = {
+        id: `${Date.now()}-${Math.random()}`,
+        text: `Uploaded file: ${file.name}`,
+        file,
+        timestamp: new Date().toISOString(),
+        type: 'file',
+        sender: currentUser,
+        replyTo: replyingMessage ? {
+          id: replyingMessage.id,
+          sender: replyingMessage.sender,
+          text: replyingMessage.text
+        } : null
+      };
+
+      onSendMessage(msg);
+      FakeServer.addMessage(currentChat, msg);
+      e.target.value = '';
+      setReplyingMessage(null);
+      setIsReplying(false);
+    }
+  };
+
+  // UPDATED: Emoji picker handler
+  const handleEmojiSelect = (emoji) => {
+    if (isEditMode) {
+      setEditText(prev => prev + emoji.native);
+    } else {
+      setNewMessage(prev => prev + emoji.native);
+    }
+    setShowEmojiPicker(false);
+  };
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -399,11 +453,11 @@ const handleAddReaction = (messageId, emoji) => {
   const getFileIcon = (fileName) => {
     const ext = fileName.split('.').pop().toLowerCase();
     if (['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(ext)) {
-      return <ImageIcon className="w-4 h-4" />;
+      return <ImageIcon className="w-3 h-3" />;
     } else if (['mp4', 'mov', 'avi'].includes(ext)) {
-      return <Video className="w-4 h-4" />;
+      return <Video className="w-3 h-3" />;
     } else {
-      return <FileText className="w-4 h-4" />;
+      return <FileText className="w-3 h-3" />;
     }
   };
 
@@ -423,93 +477,110 @@ const handleAddReaction = (messageId, emoji) => {
   const messageGroups = groupMessagesByDate();
   const isTeamChat = chatInfo.type === 'team';
 
-  // Close modals when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      const isOutsideMessageActions = !event.target.closest('.message-actions-modal');
-      const isOutsideReactions = !event.target.closest('.reactions-modal');
-      
-      if (messageActions.isOpen && isOutsideMessageActions) {
-        setMessageActions({ ...messageActions, isOpen: false });
-      }
-      if (reactionsModal.isOpen && isOutsideReactions) {
-        setReactionsModal({ ...reactionsModal, isOpen: false });
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [messageActions, reactionsModal]);
-
-  // Message Bubble Component
-const MessageBubble = ({ message, isCurrentUser, showAvatar, showTimestamp }) => {
-  const hasReactions = message.reactions && Object.keys(message.reactions).length > 0;
-  
-  return (
-    <div className={`relative ${isCurrentUser ? 'order-1' : 'order-2'}`}>
-      {/* Message bubble */}
-      <div className={`px-4 py-3 rounded-2xl relative ${
-        isCurrentUser
-          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-br-none'
-          : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
-      }`}>
-        {/* Message content */}
-        {message.type === 'file' ? (
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-lg">
-              {getFileIcon(message.file?.name || 'file')}
+  // Message Bubble Component - REMOVED EDIT MODE FROM HERE
+  const MessageBubble = ({ message, isCurrentUser, showAvatar, showTimestamp }) => {
+    const hasReactions = message.reactions && Object.keys(message.reactions).length > 0;
+    
+    // Normal message display
+    return (
+      <div className={`relative ${isCurrentUser ? 'flex justify-end' : 'flex justify-start'}`}>
+        {/* Message bubble with tail */}
+        <div className={`relative px-3 py-2 rounded-lg max-w-xs ${
+          isCurrentUser
+            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-br-none'
+            : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
+        }`}>
+          {/* Bubble tail for sender (current user) */}
+          {isCurrentUser && (
+            <div className="absolute -right-1 bottom-0 w-3 h-3 overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-purple-500 to-pink-500 transform -skew-x-12"></div>
             </div>
-            <div>
-              <div className="font-medium">{message.file?.name || 'File'}</div>
-              <div className="text-xs opacity-80">{message.text}</div>
+          )}
+          
+          {/* Bubble tail for receiver */}
+          {!isCurrentUser && (
+            <div className="absolute -left-1 bottom-0 w-3 h-3 overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full bg-white border-l border-b border-gray-200 transform skew-x-12"></div>
             </div>
-          </div>
-        ) : (
-          <div className="whitespace-pre-wrap break-words">{message.text}</div>
-        )}
+          )}
+          
+          {/* Reply indicator */}
+          {message.replyTo && (
+            <div className="mb-1.5 pb-1.5 border-l-2 border-purple-400 pl-2">
+              <div className="text-xs opacity-90">
+                Replying to <span className="font-medium">{message.replyTo.sender}</span>
+              </div>
+              <div className="text-xs truncate opacity-80">
+                {message.replyTo.text.length > 35 
+                  ? `${message.replyTo.text.substring(0, 35)}...` 
+                  : message.replyTo.text}
+              </div>
+            </div>
+          )}
+          
+          {message.type === 'file' ? (
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-white/20 rounded">
+                {getFileIcon(message.file?.name || 'file')}
+              </div>
+              <div>
+                <div className="text-sm font-medium">{message.file?.name || 'File'}</div>
+                <div className="text-xs opacity-80">{message.text}</div>
+              </div>
+            </div>
+          ) : (
+            <div className="whitespace-pre-wrap break-words text-sm">
+              {message.text}
+              {message.edited && (
+                <span className="text-xs italic ml-1 opacity-70">
+                  (edited)
+                </span>
+              )}
+            </div>
+          )}
+          
+          {showTimestamp && (
+            <div className={`text-xs mt-1 flex items-center justify-end gap-1 ${
+              isCurrentUser ? 'text-purple-100' : 'text-gray-500'
+            }`}>
+              {formatTime(message.timestamp)}
+              {isCurrentUser && message.read && (
+                <span className="text-blue-300 text-xs">✓✓</span>
+              )}
+            </div>
+          )}
+        </div>
         
-        {showTimestamp && (
-          <div className={`text-xs mt-1.5 flex items-center justify-end gap-1 ${
-            isCurrentUser ? 'text-purple-100' : 'text-gray-500'
-          }`}>
-            {formatTime(message.timestamp)}
-            {isCurrentUser && message.read && (
-              <span className="text-blue-400">✓✓</span>
-            )}
+        {/* Reactions */}
+        {hasReactions && (
+          <div className={`absolute bottom-0 ${isCurrentUser ? 'right-0' : 'left-0'} transform ${
+            isCurrentUser ? 'translate-x-full' : '-translate-x-full'
+          } flex flex-wrap gap-1 ml-1 mr-1`}>
+            {Object.entries(message.reactions).map(([emoji, users]) => (
+              <button
+                key={emoji}
+                className={`px-1.5 py-0.5 rounded-full text-xs flex items-center gap-0.5 cursor-pointer hover:scale-105 transition-transform ${
+                  users.includes('You')
+                    ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                    : 'bg-gray-100 text-gray-600 border border-gray-200'
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAddReaction(message.id, emoji);
+                }}
+                title={`${users.length} reaction${users.length > 1 ? 's' : ''} ${users.includes('You') ? '(You)' : ''}`}
+              >
+                <span className="text-xs">{emoji}</span>
+                {users.length > 1 && (
+                  <span className="text-[10px] font-medium">{users.length}</span>
+                )}
+              </button>
+            ))}
           </div>
         )}
       </div>
-      
-      {/* Reactions at bottom right - NOW FIXED POSITION */}
-      {hasReactions && (
-        <div className={`flex flex-wrap gap-1 mt-1.5 ${
-          isCurrentUser ? 'justify-end mr-1' : 'justify-start ml-1'
-        }`}>
-          {Object.entries(message.reactions).map(([emoji, users]) => (
-            <button
-              key={emoji}
-              className={`px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 cursor-pointer hover:scale-105 transition-transform ${
-                users.includes('You')
-                  ? 'bg-purple-100 text-purple-700 border border-purple-200 shadow-sm'
-                  : 'bg-gray-100 text-gray-600 border border-gray-200'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAddReaction(message.id, emoji);
-              }}
-              title={`${users.length} reaction${users.length > 1 ? 's' : ''} ${users.includes('You') ? '(You)' : ''}`}
-            >
-              <span className="text-sm">{emoji}</span>
-              <span className="text-xs font-medium min-w-[10px]">
-                {users.length > 1 ? users.length : ''}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+    );
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 to-white h-full">
@@ -524,19 +595,19 @@ const MessageBubble = ({ message, isCurrentUser, showAvatar, showTimestamp }) =>
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium">
               {chatInfo.name?.charAt(0) || 'C'}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-gray-800">
+                <h2 className="text-base font-bold text-gray-800">
                   {chatInfo.type === 'dm' ? chatInfo.name : `#${chatInfo.name}`}
                 </h2>
                 {isTeamChat && (
                   <ChevronRight className="w-4 h-4 text-gray-400" />
                 )}
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs text-gray-500">
                 {chatInfo.type === 'dm' 
                   ? `${chatInfo.description} • ${chatInfo.status}`
                   : `${chatInfo.description} • ${chatInfo.members} members`
@@ -551,31 +622,31 @@ const MessageBubble = ({ message, isCurrentUser, showAvatar, showTimestamp }) =>
           <div className="flex items-center gap-2">
             <div className={`px-3 py-1 rounded-full text-xs font-medium ${
               socketStatus === 'connected' 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
+                ? 'bg-green-100 text-green-800 border border-green-200' 
+                : 'bg-red-100 text-red-800 border border-red-200'
             }`}>
               {socketStatus === 'connected' ? '● Live' : '○ Offline'}
             </div>
-            <button className="p-2 hover:bg-gray-100 rounded-lg">
-              <MoreVertical className="w-5 h-5 text-gray-500" />
+            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <MoreVertical className="w-4 h-4 text-gray-500" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {Object.entries(messageGroups).map(([date, dateMessages]) => (
           <div key={date}>
-            <div className="flex items-center justify-center my-6">
+            <div className="flex items-center justify-center my-3">
               <div className="flex-1 h-px bg-gray-200"></div>
-              <div className="px-3 py-1 mx-2 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+              <div className="px-2 py-1 mx-2 bg-white text-gray-600 text-xs font-medium rounded-full border border-gray-200">
                 {date}
               </div>
               <div className="flex-1 h-px bg-gray-200"></div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               {dateMessages.map((message, index) => {
                 const isCurrentUser = message.sender === currentUser;
                 const showAvatar = index === 0 || dateMessages[index - 1].sender !== message.sender;
@@ -584,21 +655,22 @@ const MessageBubble = ({ message, isCurrentUser, showAvatar, showTimestamp }) =>
                 return (
                   <div 
                     key={message.id} 
-                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-1`}
                     onDoubleClick={(e) => handleDoubleClick(message, e, isCurrentUser)}
                   >
-                    <div className={`max-w-xl ${isCurrentUser ? 'ml-auto' : ''}`}>
+                    <div className={`${isCurrentUser ? 'ml-auto' : ''}`}>
                       {!isCurrentUser && showAvatar && (
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-white text-xs font-medium">
+                        <div className="flex items-center gap-2 mb-1 ml-1">
+                          <div className="w-5 h-5 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-white text-xs font-medium">
                             {message.sender.charAt(0)}
                           </div>
-                          <span className="text-sm font-medium text-gray-700">{message.sender}</span>
+                          <span className="text-xs font-medium text-gray-700">{message.sender}</span>
+                          <span className="text-xs text-gray-500">{formatTime(message.timestamp)}</span>
                         </div>
                       )}
                       
-                      <div className={`flex gap-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
-                        {!isCurrentUser && showAvatar ? <div className="w-6"></div> : null}
+                      <div className={`flex gap-2 ${isCurrentUser ? 'flex-row-reverse items-end' : 'items-end'}`}>
+                        {!isCurrentUser && showAvatar ? <div className="w-5"></div> : null}
                         
                         <MessageBubble 
                           message={message}
@@ -618,47 +690,79 @@ const MessageBubble = ({ message, isCurrentUser, showAvatar, showTimestamp }) =>
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Reply Indicator */}
-      {isReplying && replyingMessage && (
-        <div className="px-4 py-2 bg-purple-50 border-t border-purple-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-white text-xs">
-              <ReplyIcon className="w-3 h-3" />
-            </div>
-            <div>
-              <div className="text-xs text-purple-700 font-medium">
-                Replying to {replyingMessage.sender}
-              </div>
-              <div className="text-xs text-purple-600 truncate max-w-md">
-                {replyingMessage.text.length > 100 
-                  ? `${replyingMessage.text.substring(0, 100)}...` 
-                  : replyingMessage.text}
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              setIsReplying(false);
-              setReplyingMessage(null);
-            }}
-            className="p-1 hover:bg-purple-100 rounded"
-          >
-            <X className="w-4 h-4 text-purple-600" />
-          </button>
-        </div>
-      )}
-
       {/* Message Input */}
-      <div className="p-4 border-t border-gray-200 bg-white">
+      <div className="px-4 py-3 border-t border-gray-200 bg-white/90 backdrop-blur-sm">
         <form onSubmit={handleSend} className="space-y-3">
-          <div className="flex gap-2">
+          {/* EDIT MODE INDICATOR - ADD THIS */}
+          {isEditMode && editingMessage && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-400 to-indigo-400 flex items-center justify-center text-white">
+                  <Edit className="w-3 h-3" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-blue-700">
+                    Editing message
+                  </div>
+                  <div className="text-xs text-blue-600 truncate">
+                    Original: "{editingMessage.text.length > 50 
+                      ? `${editingMessage.text.substring(0, 50)}...` 
+                      : editingMessage.text}"
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                className="p-1 hover:bg-blue-100 rounded transition-colors text-blue-600 text-xs font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+          
+          {/* Reply Indicator */}
+          {isReplying && replyingMessage && !isEditMode && (
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-lg p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-white">
+                  <ReplyIcon className="w-3 h-3" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium text-purple-700">
+                    Replying to {replyingMessage.sender}
+                  </div>
+                  <div className="text-xs text-purple-600 truncate max-w-xs">
+                    {replyingMessage.text.length > 50 
+                      ? `${replyingMessage.text.substring(0, 50)}...` 
+                      : replyingMessage.text}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsReplying(false);
+                  setReplyingMessage(null);
+                }}
+                className="p-1 hover:bg-purple-100 rounded transition-colors"
+                title="Cancel reply"
+              >
+                <X className="w-3 h-3 text-purple-600" />
+              </button>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-2">
+            {/* File Attachment Button */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-3 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex-shrink-0 p-3 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 text-purple-600 transition-all duration-300 border border-purple-100 flex items-center justify-center"
               title="Attach file"
+              style={{ height: '44px', width: '44px' }}
             >
-              <Paperclip className="w-5 h-5 text-gray-500" />
+              <Paperclip className="w-4 h-4" />
             </button>
             
             <input
@@ -669,66 +773,128 @@ const MessageBubble = ({ message, isCurrentUser, showAvatar, showTimestamp }) =>
               accept="image/*,.pdf,.doc,.docx,.txt"
             />
             
-            <div className="flex-1 relative">
+            {/* UPDATED: Message Input Container */}
+            <div className="flex-1 relative" ref={emojiPickerRef}>
               <textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder={`Message ${chatInfo.type === 'dm' ? chatInfo.name : '#' + chatInfo.name}`}
-                className="w-full h-full min-h-[44px] max-h-32 px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                ref={textareaRef}
+                value={isEditMode ? editText : newMessage}
+                onChange={(e) => isEditMode ? setEditText(e.target.value) : setNewMessage(e.target.value)}
+                placeholder={
+                  isEditMode 
+                    ? "Edit your message..." 
+                    : `Message ${chatInfo.type === 'dm' ? chatInfo.name : '#' + chatInfo.name}`
+                }
+                className="message-input w-full min-h-[44px] px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none shadow-sm text-sm"
                 rows="1"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSend(e);
+                  } else if (e.key === 'Escape' && isEditMode) {
+                    onCancelEdit();
                   }
+                }}
+                style={{
+                  minHeight: '44px',
+                  maxHeight: '100px'
                 }}
               />
               
+              {/* Emoji Picker Button */}
               <button
                 type="button"
-                onClick={() => {}}
-                className="absolute right-12 bottom-2 p-1.5 hover:bg-gray-200 rounded"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 rounded transition-all duration-200 ${
+                  showEmojiPicker 
+                    ? 'bg-purple-100 text-purple-600' 
+                    : 'text-gray-400 hover:text-purple-600 hover:bg-purple-50'
+                }`}
                 title="Add emoji"
               >
-                <Smile className="w-5 h-5 text-gray-500" />
+                <Smile className="w-4 h-4" />
               </button>
+              
+              {/* EmojiMart Picker */}
+              {showEmojiPicker && (
+                <div className="absolute bottom-full right-0 mb-1 z-50">
+                  <div className="bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+                    <Picker
+                      data={data}
+                      onEmojiSelect={handleEmojiSelect}
+                      theme="light"
+                      previewPosition="none"
+                      skinTonePosition="none"
+                      perLine={8}
+                      emojiSize={20}
+                      emojiButtonSize={28}
+                      maxFrequentRows={1}
+                      navPosition="top"
+                      searchPosition="top"
+                      maxHeight={300}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             
+            {/* Send Button */}
             <button
               type="submit"
-              disabled={!newMessage.trim()}
-              className="p-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              title="Send message"
+              disabled={isEditMode ? !editText.trim() : !newMessage.trim()}
+              className={`flex-shrink-0 p-3 rounded-lg transition-all duration-300 flex items-center justify-center ${
+                (isEditMode ? editText.trim() : newMessage.trim())
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md hover:shadow-lg hover:scale-105'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+              title={isEditMode ? "Save changes" : "Send message"}
+              style={{ height: '44px', width: '44px' }}
             >
-              <Send className="w-5 h-5" />
+              {isEditMode ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
             </button>
+          </div>
+          
+          {/* Input Hint */}
+          <div className="flex items-center justify-between text-xs text-gray-500 px-1">
+            <span>
+              {isEditMode 
+                ? "Enter to save • Escape to cancel" 
+                : "Enter to send • Shift+Enter for new line"
+              }
+            </span>
+            <span className={`font-medium ${
+              (isEditMode ? editText.length : newMessage.length) > 500 
+                ? 'text-red-500' 
+                : 'text-gray-400'
+            }`}>
+              {isEditMode ? editText.length : newMessage.length}/500
+            </span>
           </div>
         </form>
       </div>
 
       {/* Modals */}
-    <MessageActionsModal
-  isOpen={messageActions.isOpen}
-  message={messageActions.message}
-  isCurrentUser={messageActions.isCurrentUser}
-  position={messageActions.position}
-  onClose={() => setMessageActions({ ...messageActions, isOpen: false })}
-  onCopy={handleCopy}
-  onReply={handleReply}
-  onForward={handleForward}
-  onDelete={handleDelete}
-  onDeleteForEveryone={handleDeleteForEveryone}
-  onReact={handleReact}
-  onEdit={handleEdit}
-/>
+      <MessageActionsModal
+        isOpen={messageActions.isOpen}
+        message={messageActions.message}
+        isCurrentUser={messageActions.isCurrentUser}
+        position={messageActions.position}
+        onClose={() => setMessageActions({ ...messageActions, isOpen: false })}
+        onCopy={handleCopy}
+        onReply={handleReply}
+        onForward={handleForward}
+        onDelete={handleDelete}
+        onDeleteForEveryone={handleDeleteForEveryone}
+        onReact={handleReact}
+        onEdit={handleEdit} // Use the updated handler
+      />
 
-   <ReactionsModal
-  isOpen={reactionsModal.isOpen}
-  message={reactionsModal.message}
-  position={reactionsModal.position}
-  onClose={() => setReactionsModal({ ...reactionsModal, isOpen: false })}
-  onAddReaction={handleAddReaction}
-/>
+      <ReactionsModal
+        isOpen={reactionsModal.isOpen}
+        message={reactionsModal.message}
+        position={reactionsModal.position}
+        onClose={() => setReactionsModal({ ...reactionsModal, isOpen: false })}
+        onAddReaction={handleAddReaction}
+      />
 
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
@@ -770,3 +936,24 @@ const MessageBubble = ({ message, isCurrentUser, showAvatar, showTimestamp }) =>
 };
 
 export default ChatMessages;
+
+// Add this handler (adjust state names and API call as needed)
+const handleAddReaction = (messageId, emoji) => {
+  // optimistic UI update — adjust `messages` / `setMessages` to your actual state vars
+  setMessages(prev => prev.map(m => {
+    if (m.id !== messageId) return m;
+    const reactions = Array.isArray(m.reactions) ? [...m.reactions] : [];
+    const idx = reactions.findIndex(r => r.emoji === emoji);
+    if (idx > -1) {
+      reactions[idx] = { ...reactions[idx], count: (reactions[idx].count || 1) + 1, byMe: true };
+    } else {
+      reactions.push({ emoji, count: 1, byMe: true });
+    }
+    return { ...m, reactions };
+  }));
+
+  // optional: call backend if you have an API function
+  if (typeof addReactionToServer === 'function') {
+    addReactionToServer(messageId, emoji).catch(err => console.error('addReaction failed', err));
+  }
+};
