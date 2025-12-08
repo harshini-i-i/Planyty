@@ -16,6 +16,7 @@ const Chat = () => {
   // Use refs to track message IDs to prevent duplicates
   const processedMessageIds = useRef(new Set());
   const isSendingMessage = useRef(false);
+  const messageCounter = useRef(0); // Counter to ensure unique IDs
 
   const { addNotification } = useNotifications();
 
@@ -34,31 +35,98 @@ const Chat = () => {
     
     // Load messages for each channel
     loadedChannels.forEach(channel => {
-      initialMessages[channel.id] = FakeServer.getMessages(channel.id);
-      // Track existing message IDs
+      const channelMessages = FakeServer.getMessages(channel.id);
+      
+      // Ensure all messages have IDs
+      initialMessages[channel.id] = channelMessages.map((msg, index) => {
+        if (!msg.id) {
+          // Generate a unique ID if missing
+          const messageId = `${Date.now()}-${messageCounter.current++}`;
+          return {
+            ...msg,
+            id: messageId
+          };
+        }
+        return msg;
+      });
+      
+      // Track existing message IDs and find the highest counter
       initialMessages[channel.id].forEach(msg => {
         processedMessageIds.current.add(msg.id);
+        // Extract counter from ID if it exists
+        const idParts = msg.id.toString().split('-');
+        if (idParts.length > 1) {
+          const counter = parseInt(idParts[1]);
+          if (!isNaN(counter) && counter >= messageCounter.current) {
+            messageCounter.current = counter + 1;
+          }
+        }
       });
     });
     
     // Load messages for each team
     loadedTeams.forEach(team => {
-      initialMessages[team.id] = FakeServer.getMessages(team.id);
+      const teamMessages = FakeServer.getMessages(team.id);
+      
+      // Ensure all messages have IDs
+      initialMessages[team.id] = teamMessages.map((msg, index) => {
+        if (!msg.id) {
+          // Generate a unique ID if missing
+          const messageId = `${Date.now()}-${messageCounter.current++}`;
+          return {
+            ...msg,
+            id: messageId
+          };
+        }
+        return msg;
+      });
+      
       // Track existing message IDs
       initialMessages[team.id].forEach(msg => {
         processedMessageIds.current.add(msg.id);
+        // Extract counter from ID if it exists
+        const idParts = msg.id.toString().split('-');
+        if (idParts.length > 1) {
+          const counter = parseInt(idParts[1]);
+          if (!isNaN(counter) && counter >= messageCounter.current) {
+            messageCounter.current = counter + 1;
+          }
+        }
       });
     });
     
     // Add DMs
     const dmIds = ['dm_john'];
     dmIds.forEach(dmId => {
-      initialMessages[dmId] = FakeServer.getMessages(dmId);
+      const dmMessages = FakeServer.getMessages(dmId);
+      
+      // Ensure all messages have IDs
+      initialMessages[dmId] = dmMessages.map((msg, index) => {
+        if (!msg.id) {
+          // Generate a unique ID if missing
+          const messageId = `${Date.now()}-${messageCounter.current++}`;
+          return {
+            ...msg,
+            id: messageId
+          };
+        }
+        return msg;
+      });
+      
       initialMessages[dmId].forEach(msg => {
         processedMessageIds.current.add(msg.id);
+        // Extract counter from ID if it exists
+        const idParts = msg.id.toString().split('-');
+        if (idParts.length > 1) {
+          const counter = parseInt(idParts[1]);
+          if (!isNaN(counter) && counter >= messageCounter.current) {
+            messageCounter.current = counter + 1;
+          }
+        }
       });
     });
     
+    console.log('Initialized messages:', initialMessages);
     setMessages(initialMessages);
   }, []);
 
@@ -80,12 +148,16 @@ const Chat = () => {
       const incoming = FakeServer.getRandomMessage(activeChannel);
       
       if (incoming && incoming.sender !== 'You') {
+        // Generate a unique ID
+        const messageId = `${Date.now()}-${messageCounter.current++}`;
+        incoming.id = messageId;
+        
         // Check if we've already processed this message ID
-        if (processedMessageIds.current.has(incoming.id)) {
+        if (processedMessageIds.current.has(messageId)) {
           return;
         }
         
-        processedMessageIds.current.add(incoming.id);
+        processedMessageIds.current.add(messageId);
         lastMessageTime = now;
         
         setMessages(prev => {
@@ -123,7 +195,8 @@ const Chat = () => {
     // Set sending flag to prevent simulated messages
     isSendingMessage.current = true;
     
-    const messageId = Date.now() + Math.random();
+    // Generate unique message ID with counter
+    const messageId = `${Date.now()}-${messageCounter.current++}`;
     const newMessage = {
       id: messageId,
       sender: 'You',
@@ -132,8 +205,10 @@ const Chat = () => {
       type: messageData.type || 'text',
       file: messageData.file,
       read: true,
-      replyTo: messageData.replyTo // Add replyTo data
+      replyTo: messageData.replyTo
     };
+
+    console.log('Sending message with ID:', messageId);
 
     // Track this message ID
     processedMessageIds.current.add(messageId);
@@ -153,8 +228,12 @@ const Chat = () => {
     }, 1000);
   }, [activeChannel]);
 
-  // Add this function to handle message deletion
   const handleDeleteMessage = useCallback((messageId, forEveryone = false) => {
+    if (!messageId) {
+      console.error('Cannot delete message: messageId is undefined');
+      return;
+    }
+    
     setMessages(prev => {
       const updated = { ...prev };
       if (updated[activeChannel]) {
@@ -172,39 +251,81 @@ const Chat = () => {
     });
   }, [activeChannel, addNotification]);
 
-  // Add this function to handle reactions
   const handleAddReaction = useCallback((messageId, emoji) => {
+    if (!messageId) {
+      console.error('Cannot add reaction: messageId is undefined');
+      return;
+    }
+    
+    console.log('Adding reaction to message:', messageId, 'with emoji:', emoji);
+    
     setMessages(prev => {
       const updated = { ...prev };
-      if (updated[activeChannel]) {
-        updated[activeChannel] = updated[activeChannel].map(msg => {
-          if (msg.id === messageId) {
-            const reactions = msg.reactions || {};
-            const userReaction = reactions[emoji] || [];
-            
-            if (userReaction.includes('You')) {
-              // Remove reaction
-              const updatedReaction = userReaction.filter(u => u !== 'You');
-              if (updatedReaction.length === 0) {
-                delete reactions[emoji];
-              } else {
-                reactions[emoji] = updatedReaction;
-              }
-            } else {
-              // Add reaction
-              reactions[emoji] = [...userReaction, 'You'];
-            }
-            
-            return { ...msg, reactions };
-          }
-          return msg;
-        });
+      
+      if (!updated[activeChannel]) {
+        console.log('No messages in this channel:', activeChannel);
+        return updated;
       }
-      return updated;
+      
+      const messageIndex = updated[activeChannel].findIndex(msg => msg.id === messageId);
+      
+      if (messageIndex === -1) {
+        console.log('Message not found:', messageId, 'in channel:', activeChannel);
+        console.log('Available messages:', updated[activeChannel].map(m => m.id));
+        return updated;
+      }
+      
+      // Create a deep copy of the messages array
+      const newMessages = [...updated[activeChannel]];
+      const messageToUpdate = { ...newMessages[messageIndex] };
+      
+      // Initialize reactions object if it doesn't exist
+      const currentReactions = messageToUpdate.reactions || {};
+      
+      // Clone the reactions object
+      const newReactions = { ...currentReactions };
+      
+      // Get current users who reacted with this emoji
+      const currentUsers = newReactions[emoji] || [];
+      
+      // Check if current user already reacted with this emoji
+      if (currentUsers.includes('You')) {
+        // Remove current user's reaction
+        const updatedUsers = currentUsers.filter(user => user !== 'You');
+        if (updatedUsers.length === 0) {
+          // If no users left, remove the emoji
+          delete newReactions[emoji];
+        } else {
+          newReactions[emoji] = updatedUsers;
+        }
+      } else {
+        // Add current user's reaction
+        newReactions[emoji] = [...currentUsers, 'You'];
+      }
+      
+      // Update the message with new reactions
+      messageToUpdate.reactions = newReactions;
+      newMessages[messageIndex] = messageToUpdate;
+      
+      console.log('Updated message reactions:', messageToUpdate.reactions);
+      
+      return {
+        ...updated,
+        [activeChannel]: newMessages
+      };
     });
-
+    
+    // Also update in FakeServer
     FakeServer.addReaction(activeChannel, messageId, emoji, 'You');
-  }, [activeChannel]);
+    
+    // Add notification
+    addNotification({
+      title: 'Reaction Added',
+      message: `You reacted with ${emoji}`,
+      type: 'info',
+      duration: 2000
+    });
+  }, [activeChannel, addNotification]);
 
   const handleNewChannel = useCallback((channelData) => {
     const newChannel = {
@@ -287,21 +408,21 @@ const Chat = () => {
       // Initialize welcome messages for new team
       const welcomeMessages = [
         {
-          id: Date.now() + Math.random(),
+          id: `${Date.now()}-${messageCounter.current++}`,
           sender: 'System',
           text: `Welcome to the ${teamData.name} team chat!`,
           timestamp: new Date().toISOString(),
           type: 'system'
         },
         {
-          id: Date.now() + Math.random() + 1,
+          id: `${Date.now()}-${messageCounter.current++}`,
           sender: 'System',
           text: teamData.description || 'No description provided.',
           timestamp: new Date().toISOString(),
           type: 'system'
         },
         {
-          id: Date.now() + Math.random() + 2,
+          id: `${Date.now()}-${messageCounter.current++}`,
           sender: 'You',
           text: `Team "${teamData.name}" has been created!`,
           timestamp: new Date().toISOString(),
@@ -369,8 +490,8 @@ const Chat = () => {
             currentChat={activeChannel}
             messages={messages[activeChannel] || []}
             onSendMessage={handleSendMessage}
-            onDeleteMessage={handleDeleteMessage} // ADD THIS
-            onAddReaction={handleAddReaction} // ADD THIS
+            onDeleteMessage={handleDeleteMessage}
+            onAddReaction={handleAddReaction}
             socketStatus={socketStatus}
             currentUser="You"
             teams={teams}

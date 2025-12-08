@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Send, Paperclip, Smile, MoreVertical, Image as ImageIcon, FileText, Video, ChevronRight } from 'lucide-react';
+import { Send, Paperclip, Smile, MoreVertical, Image as ImageIcon, FileText, Video, ChevronRight, Reply as ReplyIcon, X } from 'lucide-react';
 import { FakeServer } from '../../fake-backend/fakeServer';
 import TeamInfoModal from './modals/TeamInfoModal';
 import MessageActionsModal from './modals/MessageActionsModal';
@@ -198,16 +198,22 @@ const ChatMessages = ({
   }, [currentChat, currentUser]);
 
   // ========== MESSAGE ACTION HANDLERS ==========
-  const handleDoubleClick = (message, event, isCurrentUser) => {
-    event.stopPropagation();
-    setMessageActions({
-      isOpen: true,
-      message,
-      position: { x: event.clientX, y: event.clientY },
-      isCurrentUser,
-    });
-  };
-
+const handleDoubleClick = (message, event, isCurrentUser) => {
+  console.log('Double click triggered on message:', message);
+  event.stopPropagation();
+  
+  if (!message || !message.id) {
+    console.error('Message or message.id is undefined:', message);
+    return;
+  }
+  
+  setMessageActions({
+    isOpen: true,
+    message,
+    position: { x: event.clientX, y: event.clientY },
+    isCurrentUser,
+  });
+};
   const handleCopy = async (text) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -246,11 +252,9 @@ const ChatMessages = ({
       text: `Forwarded: ${message.text}`
     };
     
-    // Send to current chat to show it was forwarded
     onSendMessage(forwardMessage);
     FakeServer.addMessage(currentChat, forwardMessage);
     
-    // Also add to the target chat
     FakeServer.addMessage(chatId, {
       ...forwardMessage,
       id: Date.now() + Math.random() + 1
@@ -274,37 +278,88 @@ const ChatMessages = ({
     onDeleteMessage(messageId, forEveryone);
     setDeleteModal({ isOpen: false, messageId: null, forEveryone: false });
   };
+const handleReact = (message) => {
+  console.log('handleReact called with:', message);
+  
+  // Check if we're receiving an event object by mistake
+  if (message && typeof message.preventDefault === 'function') {
+    console.error('Received event object instead of message');
+    return;
+  }
+  
+  // Get the message from messageActions state instead
+  const currentMessage = messageActions.message;
+  
+  if (!currentMessage || !currentMessage.id) {
+    console.error('Cannot react: Message or message.id is missing', currentMessage);
+    return;
+  }
+  
+  console.log('Reacting to message:', currentMessage.id, currentMessage.text);
+  
+  setReactionsModal({
+    isOpen: true,
+    message: currentMessage,
+    position: { 
+      x: messageActions.position.x, 
+      y: messageActions.position.y - 50 
+    },
+  });
+  setMessageActions({ ...messageActions, isOpen: false });
+};
 
-  const handleReact = (message) => {
-    setReactionsModal({
-      isOpen: true,
-      message,
-      position: { 
-        x: messageActions.position.x, 
-        y: messageActions.position.y - 50 
-      },
-    });
-    setMessageActions({ ...messageActions, isOpen: false });
-  };
-
-  const handleAddReaction = (messageId, emoji) => {
+const handleAddReaction = (messageId, emoji) => {
+  console.log('ChatMessages: Adding reaction to message:', messageId, 'emoji:', emoji);
+  
+  if (!messageId) {
+    console.error('Cannot add reaction: messageId is undefined');
+    return;
+  }
+  
+  if (onAddReaction) {
     onAddReaction(messageId, emoji);
-    setReactionsModal({ ...reactionsModal, isOpen: false });
-  };
+  }
+  setReactionsModal({ ...reactionsModal, isOpen: false });
+};
 
   const handleEdit = (message) => {
     console.log('Edit message:', message);
     setMessageActions({ ...messageActions, isOpen: false });
   };
 
-  const handleSend = (e) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
+ const handleSend = (e) => {
+  e.preventDefault();
+  if (!newMessage.trim()) return;
 
+  const msg = {
+    id: `${Date.now()}-${Math.random()}`, // Ensure ID is set
+    text: newMessage.trim(),
+    timestamp: new Date().toISOString(),
+    type: 'text',
+    sender: currentUser,
+    replyTo: replyingMessage ? {
+      id: replyingMessage.id,
+      sender: replyingMessage.sender,
+      text: replyingMessage.text
+    } : null
+  };
+
+  onSendMessage(msg);
+  FakeServer.addMessage(currentChat, msg);
+  setNewMessage('');
+  setReplyingMessage(null);
+  setIsReplying(false);
+};
+
+  const handleFileUpload = (e) => {
+  const file = e.target.files[0];
+  if (file) {
     const msg = {
-      text: newMessage.trim(),
+      id: `${Date.now()}-${Math.random()}`, // Ensure ID is set
+      text: `Uploaded file: ${file.name}`,
+      file,
       timestamp: new Date().toISOString(),
-      type: 'text',
+      type: 'file',
       sender: currentUser,
       replyTo: replyingMessage ? {
         id: replyingMessage.id,
@@ -315,34 +370,11 @@ const ChatMessages = ({
 
     onSendMessage(msg);
     FakeServer.addMessage(currentChat, msg);
-    setNewMessage('');
+    e.target.value = '';
     setReplyingMessage(null);
     setIsReplying(false);
-  };
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const msg = {
-        text: `Uploaded file: ${file.name}`,
-        file,
-        timestamp: new Date().toISOString(),
-        type: 'file',
-        sender: currentUser,
-        replyTo: replyingMessage ? {
-          id: replyingMessage.id,
-          sender: replyingMessage.sender,
-          text: replyingMessage.text
-        } : null
-      };
-
-      onSendMessage(msg);
-      FakeServer.addMessage(currentChat, msg);
-      e.target.value = '';
-      setReplyingMessage(null);
-      setIsReplying(false);
-    }
-  };
+  }
+};
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -394,7 +426,6 @@ const ChatMessages = ({
   // Close modals when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Check if click is outside all modals
       const isOutsideMessageActions = !event.target.closest('.message-actions-modal');
       const isOutsideReactions = !event.target.closest('.reactions-modal');
       
@@ -411,84 +442,74 @@ const ChatMessages = ({
   }, [messageActions, reactionsModal]);
 
   // Message Bubble Component
-  const MessageBubble = ({ message, isCurrentUser, showAvatar, showTimestamp }) => {
-    const hasReactions = message.reactions && Object.keys(message.reactions).length > 0;
-    
-    return (
-      <div className={`relative ${isCurrentUser ? 'order-1' : 'order-2'}`}>
-        {/* Message bubble */}
-        <div className={`px-4 py-3 rounded-2xl relative ${
-          isCurrentUser
-            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-br-none'
-            : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
-        }`}>
-          {/* Reply indicator */}
-          {message.replyTo && (
-            <div className="mb-2 pb-2 border-l-4 border-purple-400 pl-2">
-              <div className="text-xs opacity-90">
-                Replying to <span className="font-medium">{message.replyTo.sender}</span>
-              </div>
-              <div className="text-sm truncate opacity-80">
-                {message.replyTo.text.length > 50 
-                  ? `${message.replyTo.text.substring(0, 50)}...` 
-                  : message.replyTo.text}
-              </div>
+const MessageBubble = ({ message, isCurrentUser, showAvatar, showTimestamp }) => {
+  const hasReactions = message.reactions && Object.keys(message.reactions).length > 0;
+  
+  return (
+    <div className={`relative ${isCurrentUser ? 'order-1' : 'order-2'}`}>
+      {/* Message bubble */}
+      <div className={`px-4 py-3 rounded-2xl relative ${
+        isCurrentUser
+          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-br-none'
+          : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
+      }`}>
+        {/* Message content */}
+        {message.type === 'file' ? (
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-lg">
+              {getFileIcon(message.file?.name || 'file')}
             </div>
-          )}
-          
-          {/* Reactions */}
-          {hasReactions && (
-            <div className="mb-2 flex flex-wrap gap-1">
-              {Object.entries(message.reactions).map(([emoji, users]) => (
-                <div
-                  key={emoji}
-                  className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 cursor-pointer ${
-                    users.includes(currentUser)
-                      ? 'bg-purple-100 text-purple-700'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddReaction(message.id, emoji);
-                  }}
-                >
-                  {emoji} {users.length > 1 ? users.length : ''}
-                </div>
-              ))}
+            <div>
+              <div className="font-medium">{message.file?.name || 'File'}</div>
+              <div className="text-xs opacity-80">{message.text}</div>
             </div>
-          )}
-          
-          {message.type === 'file' ? (
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-lg">
-                {getFileIcon(message.file?.name || 'file')}
-              </div>
-              <div>
-                <div className="font-medium">{message.file?.name || 'File'}</div>
-                <div className="text-xs opacity-80">{message.text}</div>
-              </div>
-            </div>
-          ) : (
-            <div className="whitespace-pre-wrap break-words">{message.text}</div>
-          )}
-          
-          {showTimestamp && (
-            <div className={`text-xs mt-1.5 flex items-center justify-end gap-1 ${
-              isCurrentUser ? 'text-purple-100' : 'text-gray-500'
-            }`}>
-              {formatTime(message.timestamp)}
-              {isCurrentUser && message.read && (
-                <span className="text-blue-400">✓✓</span>
-              )}
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="whitespace-pre-wrap break-words">{message.text}</div>
+        )}
         
-        {/* Three-dot action button - REMOVED as per your request */}
-        {/* No three-dot button, only double-click */}
+        {showTimestamp && (
+          <div className={`text-xs mt-1.5 flex items-center justify-end gap-1 ${
+            isCurrentUser ? 'text-purple-100' : 'text-gray-500'
+          }`}>
+            {formatTime(message.timestamp)}
+            {isCurrentUser && message.read && (
+              <span className="text-blue-400">✓✓</span>
+            )}
+          </div>
+        )}
       </div>
-    );
-  };
+      
+      {/* Reactions at bottom right - NOW FIXED POSITION */}
+      {hasReactions && (
+        <div className={`flex flex-wrap gap-1 mt-1.5 ${
+          isCurrentUser ? 'justify-end mr-1' : 'justify-start ml-1'
+        }`}>
+          {Object.entries(message.reactions).map(([emoji, users]) => (
+            <button
+              key={emoji}
+              className={`px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 cursor-pointer hover:scale-105 transition-transform ${
+                users.includes('You')
+                  ? 'bg-purple-100 text-purple-700 border border-purple-200 shadow-sm'
+                  : 'bg-gray-100 text-gray-600 border border-gray-200'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddReaction(message.id, emoji);
+              }}
+              title={`${users.length} reaction${users.length > 1 ? 's' : ''} ${users.includes('You') ? '(You)' : ''}`}
+            >
+              <span className="text-sm">{emoji}</span>
+              <span className="text-xs font-medium min-w-[10px]">
+                {users.length > 1 ? users.length : ''}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
   return (
     <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 to-white h-full">
@@ -685,29 +706,29 @@ const ChatMessages = ({
         </form>
       </div>
 
-      {/* Modals - Using external files */}
-      <MessageActionsModal
-        isOpen={messageActions.isOpen}
-        message={messageActions.message}
-        isCurrentUser={messageActions.isCurrentUser}
-        position={messageActions.position}
-        onClose={() => setMessageActions({ ...messageActions, isOpen: false })}
-        onCopy={handleCopy}
-        onReply={handleReply}
-        onForward={handleForward}
-        onDelete={handleDelete}
-        onDeleteForEveryone={handleDeleteForEveryone}
-        onReact={handleReact}
-        onEdit={handleEdit}
-      />
+      {/* Modals */}
+    <MessageActionsModal
+  isOpen={messageActions.isOpen}
+  message={messageActions.message}
+  isCurrentUser={messageActions.isCurrentUser}
+  position={messageActions.position}
+  onClose={() => setMessageActions({ ...messageActions, isOpen: false })}
+  onCopy={handleCopy}
+  onReply={handleReply}
+  onForward={handleForward}
+  onDelete={handleDelete}
+  onDeleteForEveryone={handleDeleteForEveryone}
+  onReact={handleReact}
+  onEdit={handleEdit}
+/>
 
-      <ReactionsModal
-        isOpen={reactionsModal.isOpen}
-        message={reactionsModal.message}
-        position={reactionsModal.position}
-        onClose={() => setReactionsModal({ ...reactionsModal, isOpen: false })}
-        onAddReaction={handleAddReaction}
-      />
+   <ReactionsModal
+  isOpen={reactionsModal.isOpen}
+  message={reactionsModal.message}
+  position={reactionsModal.position}
+  onClose={() => setReactionsModal({ ...reactionsModal, isOpen: false })}
+  onAddReaction={handleAddReaction}
+/>
 
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}

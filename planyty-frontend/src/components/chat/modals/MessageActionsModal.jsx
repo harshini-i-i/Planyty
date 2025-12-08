@@ -19,7 +19,11 @@ const MessageActionsModal = ({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target) &&
+        !event.target.closest('[data-reaction-modal]')
+      ) {
         onClose();
       }
     };
@@ -36,22 +40,33 @@ const MessageActionsModal = ({
   if (!isOpen || !message) return null;
 
   const actions = [
-    { icon: Copy, label: 'Copy Text', onClick: () => onCopy(message.text) },
-    { icon: Reply, label: 'Reply', onClick: () => onReply(message) },
-    { icon: Forward, label: 'Forward', onClick: () => onForward(message) },
-    { icon: Smile, label: 'React', onClick: () => onReact(message) },
+    { icon: Copy, label: 'Copy Text', onClick: (_, msg) => onCopy && onCopy(msg.text) },
+    { icon: Reply, label: 'Reply', onClick: (_, msg) => onReply && onReply(msg) },
+    { icon: Forward, label: 'Forward', onClick: (_, msg) => onForward && onForward(msg) },
+    // FIXED: Changed to pass only the message, not the event
+    { 
+      icon: Smile, 
+      label: 'React', 
+      onClick: (e, msg) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.debug('MessageActionsModal: React clicked', msg);
+        // Pass only the message, not the event
+        onReact && onReact(msg);
+      } 
+    },
   ];
 
   const userSpecificActions = isCurrentUser ? [
-    { icon: MoreVertical, label: 'Edit', onClick: () => onEdit(message) },
-    { icon: Trash2, label: 'Delete for me', onClick: () => onDelete(message.id) },
-    { icon: Trash2, label: 'Delete for everyone', onClick: () => onDeleteForEveryone(message.id), danger: true },
+    { icon: MoreVertical, label: 'Edit', onClick: (_, msg) => onEdit && onEdit(msg) },
+    { icon: Trash2, label: 'Delete for me', onClick: (_, msg) => onDelete && onDelete(msg.id) },
+    { icon: Trash2, label: 'Delete for everyone', onClick: (_, msg) => onDeleteForEveryone && onDeleteForEveryone(msg.id), danger: true },
   ] : [];
 
   return (
     <div
       ref={modalRef}
-      className="fixed z-50 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2"
+      className="message-actions-modal fixed z-50 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -60,9 +75,10 @@ const MessageActionsModal = ({
       {actions.map((action, index) => (
         <button
           key={index}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
-            action.onClick();
+            action.onClick && action.onClick(e, message);
           }}
           className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 text-gray-700 text-sm"
         >
@@ -77,9 +93,10 @@ const MessageActionsModal = ({
           {userSpecificActions.map((action, index) => (
             <button
               key={index}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
-                action.onClick();
+                action.onClick && action.onClick(e, message);
               }}
               className={`w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 text-sm ${
                 action.danger ? 'text-red-600 hover:text-red-700' : 'text-gray-700'
