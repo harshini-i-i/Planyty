@@ -1,6 +1,5 @@
-// src/components/chat/ChatSidebar.jsx
 import React, { useState, useMemo } from 'react';
-import { Hash, Lock, Plus, Users, MessageSquare, Bell, Search, ChevronDown, ChevronRight, UserPlus } from 'lucide-react';
+import { Hash, Lock, Plus, Users, MessageSquare, Bell, Search, ChevronDown, ChevronRight, X, Settings } from 'lucide-react';
 import CreateTeamModal from './modals/CreateTeamModal';
 import CreateChannelModal from './modals/CreateChannelModal';
 
@@ -20,7 +19,19 @@ const ChatSidebar = ({
 }) => {
   const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [notificationSettings, setNotificationSettings] = useState({
+    messageSounds: true,
+    desktopNotifications: true,
+    emailNotifications: false,
+    mentionSounds: true,
+    reactionNotifications: true,
+    threadNotifications: false,
+    doNotDisturb: false,
+    doNotDisturbStart: '22:00',
+    doNotDisturbEnd: '08:00'
+  });
   
   // Only show sections based on activeTab
   const expandedSections = {
@@ -66,6 +77,13 @@ const ChatSidebar = ({
   const handleCreateChannelSubmit = (channelData) => {
     onNewChannel(channelData);
     setShowCreateChannelModal(false);
+  };
+
+  const handleNotificationSettingChange = (setting) => {
+    setNotificationSettings(prev => ({
+      ...prev,
+      [setting]: !prev[setting]
+    }));
   };
 
   // Show only the section for the active tab
@@ -253,6 +271,226 @@ const ChatSidebar = ({
     }
   };
 
+  // Notification Settings Modal
+  const NotificationSettingsModal = () => {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-800">Notification Settings</h2>
+                  <p className="text-sm text-gray-600">Manage your chat notification preferences</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowNotificationsModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Content */}
+          <div className="p-6 space-y-6">
+            {/* General Notifications */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">General Settings</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Message Sounds</p>
+                    <p className="text-xs text-gray-500">Play sound for new messages</p>
+                  </div>
+                  <button
+                    onClick={() => handleNotificationSettingChange('messageSounds')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                      notificationSettings.messageSounds ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                      notificationSettings.messageSounds ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Desktop Notifications</p>
+                    <p className="text-xs text-gray-500">Show desktop notifications</p>
+                  </div>
+                  <button
+                    onClick={() => handleNotificationSettingChange('desktopNotifications')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                      notificationSettings.desktopNotifications ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                      notificationSettings.desktopNotifications ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Email Notifications</p>
+                    <p className="text-xs text-gray-500">Receive email summaries</p>
+                  </div>
+                  <button
+                    onClick={() => handleNotificationSettingChange('emailNotifications')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                      notificationSettings.emailNotifications ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                      notificationSettings.emailNotifications ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Chat Specific Notifications */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Chat Notifications</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Mention Sounds</p>
+                    <p className="text-xs text-gray-500">Play sound when mentioned</p>
+                  </div>
+                  <button
+                    onClick={() => handleNotificationSettingChange('mentionSounds')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                      notificationSettings.mentionSounds ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                      notificationSettings.mentionSounds ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Reaction Notifications</p>
+                    <p className="text-xs text-gray-500">Notify when someone reacts to your messages</p>
+                  </div>
+                  <button
+                    onClick={() => handleNotificationSettingChange('reactionNotifications')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                      notificationSettings.reactionNotifications ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                      notificationSettings.reactionNotifications ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Thread Notifications</p>
+                    <p className="text-xs text-gray-500">Notify about thread replies</p>
+                  </div>
+                  <button
+                    onClick={() => handleNotificationSettingChange('threadNotifications')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                      notificationSettings.threadNotifications ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                      notificationSettings.threadNotifications ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Do Not Disturb */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Do Not Disturb</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Enable Do Not Disturb</p>
+                    <p className="text-xs text-gray-500">Silence notifications during set hours</p>
+                  </div>
+                  <button
+                    onClick={() => handleNotificationSettingChange('doNotDisturb')}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                      notificationSettings.doNotDisturb ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                      notificationSettings.doNotDisturb ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {notificationSettings.doNotDisturb && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Start Time</label>
+                      <input
+                        type="time"
+                        value={notificationSettings.doNotDisturbStart}
+                        onChange={(e) => setNotificationSettings(prev => ({
+                          ...prev,
+                          doNotDisturbStart: e.target.value
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">End Time</label>
+                      <input
+                        type="time"
+                        value={notificationSettings.doNotDisturbEnd}
+                        onChange={(e) => setNotificationSettings(prev => ({
+                          ...prev,
+                          doNotDisturbEnd: e.target.value
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowNotificationsModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => setShowNotificationsModal(false)}
+                className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg transition-all shadow-md hover:shadow-lg"
+              >
+                Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="w-64 border-r border-gray-200 flex flex-col bg-white">
@@ -261,11 +499,16 @@ const ChatSidebar = ({
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold text-gray-800">Chat</h1>
             <div className="flex items-center gap-2">
-              <button className="p-1.5 hover:bg-gray-100 rounded-lg">
+              {/* REMOVED: Add member button */}
+              {/* Only keep notification button */}
+              <button 
+                onClick={() => setShowNotificationsModal(true)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors relative"
+                title="Notification Settings"
+              >
                 <Bell className="w-5 h-5 text-gray-600" />
-              </button>
-              <button className="p-1.5 hover:bg-gray-100 rounded-lg">
-                <UserPlus className="w-5 h-5 text-gray-600" />
+                {/* Optional: Show notification badge */}
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
               </button>
             </div>
           </div>
@@ -334,8 +577,11 @@ const ChatSidebar = ({
           onClose={() => setShowCreateChannelModal(false)}
         />
       )}
+
+      {/* Notification Settings Modal */}
+      {showNotificationsModal && <NotificationSettingsModal />}
     </>
   );
 };
 
-export default ChatSidebar;                                                                                                                                                                                                                            
+export default ChatSidebar;

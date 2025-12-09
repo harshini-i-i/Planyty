@@ -18,22 +18,21 @@ const ChatMessages = ({
   onDeleteMessage,
   onAddReaction,
   onEditMessage,
-  onStartEditing, // ADD THIS PROP
-  onCancelEdit,   // ADD THIS PROP
-  socketStatus,
+  onStartEditing,  onCancelEdit,  socketStatus,
   currentUser,
   teams = [],
   channels = [],
-  isEditMode,     // ADD THIS PROP
-  editingMessage, // ADD THIS PROP
-  editText,       // ADD THIS PROP
-  setEditText     // ADD THIS PROP
-}) => {
+  isEditMode,  editingMessage,  editText,  setEditText}) => {
   const [newMessage, setNewMessage] = useState('');
   const [showTeamInfo, setShowTeamInfo] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const [simulatedMessages, setSimulatedMessages] = useState([]);
+  // Local messages state for optimistic updates (sync from prop)
+  const [messagesState, setMessages] = useState(messages || []);
+  useEffect(() => {
+    setMessages(messages || []);
+  }, [messages]);
   
   // Message action states
   const [messageActions, setMessageActions] = useState({
@@ -461,7 +460,7 @@ const ChatMessages = ({
     }
   };
 
-  const allMessages = [...(messages || []), ...simulatedMessages]
+  const allMessages = [...(messagesState || []), ...simulatedMessages]
     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
   const groupMessagesByDate = () => {
@@ -477,111 +476,138 @@ const ChatMessages = ({
   const messageGroups = groupMessagesByDate();
   const isTeamChat = chatInfo.type === 'team';
 
-  // Message Bubble Component - REMOVED EDIT MODE FROM HERE
-  const MessageBubble = ({ message, isCurrentUser, showAvatar, showTimestamp }) => {
-    const hasReactions = message.reactions && Object.keys(message.reactions).length > 0;
-    
-    // Normal message display
-    return (
-      <div className={`relative ${isCurrentUser ? 'flex justify-end' : 'flex justify-start'}`}>
-        {/* Message bubble with tail */}
-        <div className={`relative px-3 py-2 rounded-lg max-w-xs ${
-          isCurrentUser
-            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-br-none'
-            : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
-        }`}>
-          {/* Bubble tail for sender (current user) */}
-          {isCurrentUser && (
-            <div className="absolute -right-1 bottom-0 w-3 h-3 overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-purple-500 to-pink-500 transform -skew-x-12"></div>
+ // Message Bubble Component - FIXED VERSION
+// Message Bubble Component - FIXED VERSION with reactions below bubble
+const MessageBubble = ({ message, isCurrentUser, showTimestamp = false }) => {
+  const hasReactions = message.reactions && 
+    ((Array.isArray(message.reactions) && message.reactions.length > 0) ||
+     (typeof message.reactions === 'object' && Object.keys(message.reactions).length > 0));
+  
+  return (
+    <div className={`relative ${isCurrentUser ? 'flex flex-col items-end' : 'flex flex-col items-start'}`}>
+      {/* Message bubble */}
+      <div className={`relative px-3 py-2 rounded-lg max-w-xs ${
+        isCurrentUser
+          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+          : 'bg-white text-gray-800 border border-gray-200 shadow-sm'
+      }`}>
+        {message.replyTo && (
+          <div className="mb-1.5 pb-1.5 border-l-2 border-purple-400 pl-2">
+            <div className="text-xs opacity-90">
+              Replying to <span className="font-medium">{message.replyTo.sender}</span>
             </div>
-          )}
-          
-          {/* Bubble tail for receiver */}
-          {!isCurrentUser && (
-            <div className="absolute -left-1 bottom-0 w-3 h-3 overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-white border-l border-b border-gray-200 transform skew-x-12"></div>
+            <div className="text-xs truncate opacity-80">
+              {message.replyTo.text.length > 35 
+                ? `${message.replyTo.text.substring(0, 35)}...` 
+                : message.replyTo.text}
             </div>
-          )}
-          
-          {/* Reply indicator */}
-          {message.replyTo && (
-            <div className="mb-1.5 pb-1.5 border-l-2 border-purple-400 pl-2">
-              <div className="text-xs opacity-90">
-                Replying to <span className="font-medium">{message.replyTo.sender}</span>
-              </div>
-              <div className="text-xs truncate opacity-80">
-                {message.replyTo.text.length > 35 
-                  ? `${message.replyTo.text.substring(0, 35)}...` 
-                  : message.replyTo.text}
-              </div>
-            </div>
-          )}
-          
-          {message.type === 'file' ? (
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-white/20 rounded">
-                {getFileIcon(message.file?.name || 'file')}
-              </div>
-              <div>
-                <div className="text-sm font-medium">{message.file?.name || 'File'}</div>
-                <div className="text-xs opacity-80">{message.text}</div>
-              </div>
-            </div>
-          ) : (
-            <div className="whitespace-pre-wrap break-words text-sm">
-              {message.text}
-              {message.edited && (
-                <span className="text-xs italic ml-1 opacity-70">
-                  (edited)
-                </span>
-              )}
-            </div>
-          )}
-          
-          {showTimestamp && (
-            <div className={`text-xs mt-1 flex items-center justify-end gap-1 ${
-              isCurrentUser ? 'text-purple-100' : 'text-gray-500'
-            }`}>
-              {formatTime(message.timestamp)}
-              {isCurrentUser && message.read && (
-                <span className="text-blue-300 text-xs">✓✓</span>
-              )}
-            </div>
-          )}
-        </div>
+          </div>
+        )}
         
-        {/* Reactions */}
-        {hasReactions && (
-          <div className={`absolute bottom-0 ${isCurrentUser ? 'right-0' : 'left-0'} transform ${
-            isCurrentUser ? 'translate-x-full' : '-translate-x-full'
-          } flex flex-wrap gap-1 ml-1 mr-1`}>
-            {Object.entries(message.reactions).map(([emoji, users]) => (
-              <button
-                key={emoji}
-                className={`px-1.5 py-0.5 rounded-full text-xs flex items-center gap-0.5 cursor-pointer hover:scale-105 transition-transform ${
-                  users.includes('You')
-                    ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'
-                }`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAddReaction(message.id, emoji);
-                }}
-                title={`${users.length} reaction${users.length > 1 ? 's' : ''} ${users.includes('You') ? '(You)' : ''}`}
-              >
-                <span className="text-xs">{emoji}</span>
-                {users.length > 1 && (
-                  <span className="text-[10px] font-medium">{users.length}</span>
-                )}
-              </button>
-            ))}
+        {message.type === 'file' ? (
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-white/20 rounded">
+              {getFileIcon(message.file?.name || 'file')}
+            </div>
+            <div>
+              <div className="text-sm font-medium">{message.file?.name || 'File'}</div>
+              <div className="text-xs opacity-80">{message.text}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="whitespace-pre-wrap break-words text-sm">
+            {message.text}
+            {message.edited && (
+              <span className="text-xs italic ml-1 opacity-70">(edited)</span>
+            )}
+          </div>
+        )}
+        
+        {/* Show timestamp if enabled */}
+        {showTimestamp && (
+          <div className={`text-xs mt-1 flex items-center justify-end gap-1 ${
+            isCurrentUser ? 'text-purple-100' : 'text-gray-500'
+          }`}>
+            {formatTime(message.timestamp)}
+            {isCurrentUser && message.read && (
+              <span className="text-blue-300 text-xs">✓✓</span>
+            )}
           </div>
         )}
       </div>
-    );
-  };
+      
+      {/* Reactions positioned below the bubble */}
+      {hasReactions && (
+        <div className={`flex flex-wrap gap-1 mt-1 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+          {Array.isArray(message.reactions) 
+            ? message.reactions.map((reaction) => (
+                <button
+                  key={reaction.emoji}
+                  className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 cursor-pointer hover:scale-105 transition-transform ${
+                    reaction.byMe
+                      ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                      : 'bg-gray-100 text-gray-600 border border-gray-200'
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddReaction(message.id, reaction.emoji);
+                  }}
+                  title={`${reaction.count || 1} reaction${(reaction.count || 1) > 1 ? 's' : ''} ${reaction.byMe ? '(You)' : ''}`}
+                >
+                  <span className="text-xs">{reaction.emoji}</span>
+                  {(reaction.count || 1) > 1 && (
+                    <span className="text-[10px] font-medium">{reaction.count || 1}</span>
+                  )}
+                </button>
+              ))
+            : Object.entries(message.reactions || {}).map(([emoji, users]) => (
+                <button
+                  key={emoji}
+                  className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 cursor-pointer hover:scale-105 transition-transform ${
+                    users.includes('You')
+                      ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                      : 'bg-gray-100 text-gray-600 border border-gray-200'
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddReaction(message.id, emoji);
+                  }}
+                  title={`${users.length} reaction${users.length > 1 ? 's' : ''} ${users.includes('You') ? '(You)' : ''}`}
+                >
+                  <span className="text-xs">{emoji}</span>
+                  {users.length > 1 && (
+                    <span className="text-[10px] font-medium">{users.length}</span>
+                  )}
+                </button>
+              ))
+          }
+        </div>
+      )}
+    </div>
+  );
+};
+  // add this handler INSIDE the ChatMessages component (before the return)
+  const handleAddReaction = (messageId, emoji) => {
+    // optimistic UI update against local state
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId) return m;
+      const reactionsObj = Array.isArray(m.reactions) ? [...m.reactions] : [];
+      const existing = reactionsObj.find(r => r.emoji === emoji);
+      if (existing) {
+        existing.count = (existing.count || 1) + 1;
+        existing.byMe = true;
+      } else {
+        reactionsObj.push({ emoji, count: 1, byMe: true });
+      }
+      return { ...m, reactions: reactionsObj };
+    }));
 
+    // notify parent / server
+    if (typeof onAddReaction === 'function') {
+      onAddReaction(messageId, emoji);
+    }
+  };
+  
   return (
     <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 to-white h-full">
       {/* Chat Header */}
@@ -936,24 +962,3 @@ const ChatMessages = ({
 };
 
 export default ChatMessages;
-
-// Add this handler (adjust state names and API call as needed)
-const handleAddReaction = (messageId, emoji) => {
-  // optimistic UI update — adjust `messages` / `setMessages` to your actual state vars
-  setMessages(prev => prev.map(m => {
-    if (m.id !== messageId) return m;
-    const reactions = Array.isArray(m.reactions) ? [...m.reactions] : [];
-    const idx = reactions.findIndex(r => r.emoji === emoji);
-    if (idx > -1) {
-      reactions[idx] = { ...reactions[idx], count: (reactions[idx].count || 1) + 1, byMe: true };
-    } else {
-      reactions.push({ emoji, count: 1, byMe: true });
-    }
-    return { ...m, reactions };
-  }));
-
-  // optional: call backend if you have an API function
-  if (typeof addReactionToServer === 'function') {
-    addReactionToServer(messageId, emoji).catch(err => console.error('addReaction failed', err));
-  }
-};

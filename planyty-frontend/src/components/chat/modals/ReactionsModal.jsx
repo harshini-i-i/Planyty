@@ -46,7 +46,10 @@ const ReactionsModal = ({
       onAddReaction(message.id, emoji);
     }
     
-    onClose();
+    // delay closing so the toast can render near the message before modal unmounts
+    setTimeout(() => {
+      onClose && onClose();
+    }, 200);
   };
 
   // Calculate position to stay in viewport
@@ -77,11 +80,23 @@ const ReactionsModal = ({
 
       {/* Simple toast notification */}
       {showToast && selectedEmoji && (
-        <div className="fixed bottom-6 right-6 z-60 pointer-events-none animate-bounce">
-          <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-full p-3 shadow-lg flex items-center justify-center text-2xl">
-            <span className="text-white">{selectedEmoji}</span>
-          </div>
-        </div>
+        (() => {
+          // position the floating emoji near the message click position
+          const toastOffsetX = 20; // tweak to put it slightly to the right
+          const toastOffsetY = 36; // tweak to put it slightly below the click
+          const toastX = Math.min(position.x + toastOffsetX, window.innerWidth - 72);
+          const toastY = Math.min(position.y + toastOffsetY, window.innerHeight - 72);
+          return (
+            <div
+              className="fixed pointer-events-none"
+              style={{ left: `${toastX}px`, top: `${toastY}px`, zIndex: 9999 }}
+            >
+              <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-full p-3 shadow-lg flex items-center justify-center text-2xl animate-bounce">
+                <span className="text-white">{selectedEmoji}</span>
+              </div>
+            </div>
+          );
+        })()
       )}
     </>
   );
