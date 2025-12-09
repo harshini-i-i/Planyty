@@ -674,41 +674,79 @@ const MessageBubble = ({ message, isCurrentUser, showTimestamp = false }) => {
 
             <div className="space-y-2">
               {dateMessages.map((message, index) => {
-                const isCurrentUser = message.sender === currentUser;
-                const showAvatar = index === 0 || dateMessages[index - 1].sender !== message.sender;
-                const showTimestamp = index === dateMessages.length - 1 || dateMessages[index + 1].sender !== message.sender;
+  const isCurrentUser = message.sender === currentUser;
+  const showAvatar = index === 0 || dateMessages[index - 1].sender !== message.sender;
+  const showTimestamp = index === dateMessages.length - 1 || dateMessages[index + 1].sender !== message.sender;
 
-                return (
-                  <div 
-                    key={message.id} 
-                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-1`}
-                    onDoubleClick={(e) => handleDoubleClick(message, e, isCurrentUser)}
-                  >
-                    <div className={`${isCurrentUser ? 'ml-auto' : ''}`}>
-                      {!isCurrentUser && showAvatar && (
-                        <div className="flex items-center gap-2 mb-1 ml-1">
-                          <div className="w-5 h-5 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-white text-xs font-medium">
-                            {message.sender.charAt(0)}
-                          </div>
-                          <span className="text-xs font-medium text-gray-700">{message.sender}</span>
-                          <span className="text-xs text-gray-500">{formatTime(message.timestamp)}</span>
-                        </div>
-                      )}
-                      
-                      <div className={`flex gap-2 ${isCurrentUser ? 'flex-row-reverse items-end' : 'items-end'}`}>
-                        {!isCurrentUser && showAvatar ? <div className="w-5"></div> : null}
-                        
-                        <MessageBubble 
-                          message={message}
-                          isCurrentUser={isCurrentUser}
-                          showAvatar={showAvatar}
-                          showTimestamp={showTimestamp}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+  return (
+    <div 
+      key={message.id} 
+      className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-1`}
+      onDoubleClick={(e) => handleDoubleClick(message, e, isCurrentUser)}
+    >
+      {!isCurrentUser && (
+        <div className="flex items-start max-w-[70%]">
+          {/* Avatar container - always takes up space */}
+          <div className={`flex-shrink-0 ${showAvatar ? 'w-8' : 'w-8 invisible'}`}>
+            {showAvatar && (
+              <div className="w-5 h-5 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-white text-xs font-medium">
+                {message.sender.charAt(0)}
+              </div>
+            )}
+          </div>
+          
+          {/* Message content container */}
+          <div className="ml-2">
+            {/* Sender name - only show for first message in group */}
+            {showAvatar && (
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium text-gray-700">{message.sender}</span>
+                {showTimestamp && (
+                  <span className="text-xs text-gray-500">{formatTime(message.timestamp)}</span>
+                )}
+              </div>
+            )}
+            
+            {/* Message bubble */}
+            <MessageBubble 
+              message={message}
+              isCurrentUser={isCurrentUser}
+              showTimestamp={false}
+            />
+            
+            {/* Timestamp for non-first messages in group */}
+            {!showAvatar && showTimestamp && (
+              <div className="text-xs text-gray-500 mt-1 ml-1">
+                {formatTime(message.timestamp)}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Current user's messages */}
+      {isCurrentUser && (
+        <div className="flex flex-col items-end max-w-[70%]">
+          <MessageBubble 
+            message={message}
+            isCurrentUser={isCurrentUser}
+            showTimestamp={false}
+          />
+          
+          {/* Timestamp for current user */}
+          {showTimestamp && (
+            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+              {formatTime(message.timestamp)}
+              {message.read && (
+                <span className="text-blue-500 text-xs">✓✓</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+})}
             </div>
           </div>
         ))}

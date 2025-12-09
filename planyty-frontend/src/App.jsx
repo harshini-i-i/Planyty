@@ -1,16 +1,18 @@
-// src/App.jsx (updated with NotificationProvider)
+// src/App.jsx (updated with NotificationProvider and routes)
 import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext'; // Added this
+import { NotificationProvider } from './contexts/NotificationContext';
 
 // Layout Components
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 
 // Pages
+import LandingPage from './pages/LandingPage'; // Added
+import CompanyOnboarding from './pages/CompanyOnboarding'; // Added
 import Dashboard from './pages/Dashboard';
 import Tasks from './pages/Tasks';
 import Chat from './pages/Chat';
@@ -50,7 +52,7 @@ const MainLayout = () => {
         toggleSidebar={toggleSidebar}
       />
 
-      {/* Floating Logo Button - Positioned properly relative to the floating header */}
+      {/* Floating Logo Button */}
       {!isSidebarOpen && (
         <button
           onClick={toggleSidebar}
@@ -65,7 +67,7 @@ const MainLayout = () => {
         </button>
       )}
 
-      {/* Clickable area on desktop to close sidebar when clicking logo area */}
+      {/* Clickable area to close sidebar */}
       {isSidebarOpen && (
         <div 
           className="fixed top-4 left-4 z-40 w-64 h-16 cursor-pointer"
@@ -131,14 +133,20 @@ const AppRouter = () => {
     <Routes>
       {!user ? (
         <>
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="/onboard-company" element={<CompanyOnboarding />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </>
       ) : (
         <>
+          {/* Protected Routes - Redirect authenticated users away from auth pages */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Navigate to="/dashboard" replace />} />
           <Route path="/signup" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/onboard-company" element={<Navigate to="/dashboard" replace />} />
           <Route path="/*" element={<MainLayout />} />
         </>
       )}
@@ -151,7 +159,7 @@ const App = () => (
   <AuthProvider>
     <AppProvider>
       <SocketProvider>
-        <NotificationProvider> {/* Wrap with NotificationProvider */}
+        <NotificationProvider>
           <AppRouter />
         </NotificationProvider>
       </SocketProvider>
