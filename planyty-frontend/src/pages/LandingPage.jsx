@@ -14,6 +14,7 @@ import logo from '../assets/planytynewlogo.png';
 import chatScreenshot from '../assets/chat.png';
 import taskScreenshot from '../assets/task.png';
 import workspaceScreenshot from '../assets/workspace.png';
+import dashboardScreenshot from '../assets/dashboard.png';
 
 // Import the CardSwap component
 import CardSwap, { Card } from '../components/CardSwap';
@@ -204,35 +205,12 @@ const AnimatedGrid = () => (
 const LandingPage = () => {
   const [activeCard, setActiveCard] = useState(0);
   
-  const cardFeatures = [
-    {
-      title: "Smart Workspaces",
-      description: "Organize projects, teams, and tasks in dedicated workspaces",
-      image: workspaceScreenshot,
-      icon: <Layout className="w-6 h-6 text-purple-500" />,
-      color: "from-purple-500 to-pink-500"
-    },
-    {
-      title: "Task Management",
-      description: "Track progress, assign owners, and set deadlines with ease",
-      image: taskScreenshot,
-      icon: <CheckCircle className="w-6 h-6 text-green-500" />,
-      color: "from-green-500 to-emerald-500"
-    },
-    {
-      title: "Team Chat",
-      description: "Real-time collaboration with integrated chat and notifications",
-      image: chatScreenshot,
-      icon: <MessageSquare className="w-6 h-6 text-blue-500" />,
-      color: "from-blue-500 to-cyan-500"
-    },
-    {
-      title: "Progress Analytics",
-      description: "Visual dashboards to track team performance and velocity",
-      image: workspaceScreenshot,
-      icon: <BarChart className="w-6 h-6 text-purple-600" />,
-      color: "from-purple-600 to-violet-600"
-    }
+  // Use all unique screenshots including dashboard
+  const screenshots = [
+    workspaceScreenshot,
+    taskScreenshot,
+    chatScreenshot,
+    dashboardScreenshot
   ];
 
   const handleCardClick = (index) => {
@@ -265,32 +243,21 @@ const LandingPage = () => {
                   <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                     Planyty
                   </span>
-                  <div className="text-xs text-gray-500 font-medium">plan with clarity</div>
+                
                 </div>
               </div>
               
               <div className="flex items-center space-x-6">
-                <Link 
-                  to="/login" 
-                  className="px-4 py-2 text-gray-700 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200 font-medium group"
-                >
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                    </svg>
-                    Log in
-                  </span>
-                </Link>
-                
+              
                 <Link
-                  to="/onboard-company"
+                  to="/signup"
                   className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 hover:shadow-lg hover:scale-105 relative overflow-hidden group flex items-center"
                 >
                   <span className="relative z-10 flex items-center">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                     </svg>
-                    Sign up free
+                    Sign up 
                   </span>
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
                 </Link>
@@ -300,16 +267,16 @@ const LandingPage = () => {
         </nav>
 
         {/* Hero Section with CardSwap */}
-        <section className="pt-20 pb-16 px-6 relative min-h-[800px]">
+        <section className="pt-12 pb-16 px-6 relative">
           <div className="absolute top-20 right-20 w-64 h-64 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-r from-purple-300/5 to-pink-300/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
           
           <div className="max-w-7xl mx-auto relative">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="grid lg:grid-cols-2 gap-12 items-start">
               {/* Left Column - Text Content */}
               <div className="text-left">
                 {/* Enhanced Badge */}
-                <div className="inline-flex items-center space-x-2 mb-8 px-5 py-3 bg-white/90 backdrop-blur-sm rounded-full border border-purple-200 shadow-md animate-float">
+                <div className="inline-flex items-center space-x-2 mb-6 px-5 py-3 bg-white/90 backdrop-blur-sm rounded-full border border-purple-200 shadow-md animate-float">
                   <div className="relative">
                     <Sparkles className="w-5 h-5 text-purple-500 animate-spin-slow" />
                     <div className="absolute inset-0 bg-purple-500 rounded-full blur-sm opacity-30"></div>
@@ -323,7 +290,7 @@ const LandingPage = () => {
                 </div>
                 
                 {/* Enhanced Main Heading */}
-                <div className="mb-8">
+                <div className="mb-6">
                   <h1 className="text-5xl md:text-7xl font-bold mb-4 leading-tight relative">
                     <span className="block text-gray-900 drop-shadow-sm">
                       Plan with{' '}
@@ -344,7 +311,7 @@ const LandingPage = () => {
                 </div>
                 
                 {/* Enhanced Tagline */}
-                <div className="mb-10">
+                <div className="mb-8">
                   <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed bg-white/50 backdrop-blur-sm p-6 rounded-2xl border border-purple-100 shadow-sm">
                     The intelligent workspace where plans turn into reality. 
                     <span className="block mt-2 text-purple-600 font-medium">
@@ -354,7 +321,7 @@ const LandingPage = () => {
                 </div>
                 
                 {/* Enhanced CTA Buttons */}
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-10">
                   <Link
                     to="/onboard-company"
                     className="group px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl text-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-lg flex items-center justify-center w-full sm:w-auto relative overflow-hidden"
@@ -389,16 +356,34 @@ const LandingPage = () => {
                 {/* Active Feature Indicator */}
                 <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-purple-100 shadow-sm">
                   <div className="flex items-center space-x-3 mb-4">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${cardFeatures[activeCard].color} flex items-center justify-center`}>
-                      {cardFeatures[activeCard].icon}
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${
+                      activeCard === 0 ? 'from-purple-500 to-pink-500' :
+                      activeCard === 1 ? 'from-green-500 to-emerald-500' :
+                      activeCard === 2 ? 'from-blue-500 to-cyan-500' :
+                      'from-purple-600 to-violet-600'
+                    } flex items-center justify-center`}>
+                      {activeCard === 0 ? <Layout className="w-6 h-6 text-white" /> :
+                       activeCard === 1 ? <CheckCircle className="w-6 h-6 text-white" /> :
+                       activeCard === 2 ? <MessageSquare className="w-6 h-6 text-white" /> :
+                       <BarChart className="w-6 h-6 text-white" />}
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900 text-lg">{cardFeatures[activeCard].title}</h3>
-                      <p className="text-gray-600 text-sm">{cardFeatures[activeCard].description}</p>
+                      <h3 className="font-bold text-gray-900 text-lg">
+                        {activeCard === 0 ? "Smart Workspaces" :
+                         activeCard === 1 ? "Task Management" :
+                         activeCard === 2 ? "Team Chat" :
+                         "Progress Dashboard"}
+                      </h3>
+                      <p className="text-gray-600 text-sm">
+                        {activeCard === 0 ? "Organize projects, teams, and tasks in dedicated workspaces" :
+                         activeCard === 1 ? "Track progress, assign owners, and set deadlines with ease" :
+                         activeCard === 2 ? "Real-time collaboration with integrated chat and notifications" :
+                         "Visual dashboards to track team performance and project velocity"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    {cardFeatures.map((_, index) => (
+                    {[0, 1, 2, 3].map((index) => (
                       <button
                         key={index}
                         onClick={() => handleCardClick(index)}
@@ -407,71 +392,45 @@ const LandingPage = () => {
                             ? 'bg-gradient-to-r from-purple-500 to-pink-500 w-8' 
                             : 'bg-purple-200 hover:bg-purple-300'
                         }`}
-                        aria-label={`View ${cardFeatures[index].title}`}
+                        aria-label={`View card ${index + 1}`}
                       />
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Right Column - CardSwap Component */}
-              <div className="relative h-[600px]">
+              {/* Right Column - CardSwap Component - LARGER CARDS */}
+              <div className="relative h-[650px] -mt-8">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div style={{ height: '600px', position: 'relative', width: '100%' }}>
+                  <div style={{ 
+                    height: '650px', 
+                    position: 'relative', 
+                    width: '100%' 
+                  }}>
                     <CardSwap
                       cardDistance={60}
                       verticalDistance={70}
                       delay={5000}
                       pauseOnHover={true}
                       onCardClick={handleCardClick}
-                      width={400}
-                      height={300}
-                      skewAmount={8}
+                      width={500}
+                      height={380}
+                      skewAmount={5}
                       easing="elastic"
                     >
-                      {cardFeatures.map((feature, index) => (
+                      {screenshots.map((screenshot, index) => (
                         <Card
                           key={index}
-                          className="cursor-pointer hover:scale-105 transition-transform duration-300"
+                          className="cursor-pointer hover:scale-105 transition-transform duration-300 border-0 shadow-2xl"
                           onClick={() => handleCardClick(index)}
                         >
-                          <div className="relative w-full h-full">
-                            <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 rounded-full bg-red-400"></div>
-                                <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
-                                <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                              </div>
-                              <div className="text-xs font-medium text-gray-500 bg-white/80 px-2 py-1 rounded">
-                                Planyty • {feature.title}
-                              </div>
-                            </div>
-                            
-                            <div className="w-full h-full overflow-hidden rounded-xl">
-                              <img 
-                                src={feature.image} 
-                                alt={feature.title}
-                                className="w-full h-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-                            </div>
-                            
-                            <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 border border-purple-200 shadow-sm">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${feature.color} flex items-center justify-center`}>
-                                    {feature.icon}
-                                  </div>
-                                  <div>
-                                    <div className="font-bold text-gray-900 text-sm">{feature.title}</div>
-                                    <div className="text-gray-600 text-xs">{feature.description}</div>
-                                  </div>
-                                </div>
-                                <div className="text-purple-600">
-                                  <Maximize2 className="w-4 h-4" />
-                                </div>
-                              </div>
-                            </div>
+                          {/* EXPANDED CARD - Image covers ENTIRE area */}
+                          <div className="relative w-full h-full bg-white rounded-2xl overflow-hidden">
+                            <img 
+                              src={screenshot} 
+                              alt={`Planyty Screenshot ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
                           </div>
                         </Card>
                       ))}
@@ -486,160 +445,215 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Features Section */}
-        <section className="py-16 px-6 bg-white/50 backdrop-blur-sm relative">
-          <div className="absolute inset-0 opacity-5"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-            }}
-          />
+{/* Features Section - Checkerboard Pattern (White Background) */}
+{/* Features Section - Checkerboard Pattern (White Background) */}
+<section className="py-16 px-6 bg-white relative">
+  <div className="absolute inset-0 opacity-5"
+    style={{
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+    }}
+  />
+  
+  <div className="max-w-7xl mx-auto relative">
+    <div className="text-center mb-16">
+      <div className="inline-block mb-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center mx-auto animate-bounce shadow-lg">
+          <Zap className="w-8 h-8 text-white" />
+        </div>
+      </div>
+      <h2 className="text-4xl font-bold text-gray-900 mb-4">
+        Everything your team needs to succeed
+      </h2>
+      <p className="text-gray-600 text-lg">
+        Comprehensive tools for planning, execution, and collaboration
+      </p>
+    </div>
+
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
+      {[
+        // Row 1: Purple-White-Purple
+        {
+          icon: <Layout className="w-8 h-8" />,
+          title: "Smart Workspaces",
+          desc: "Organize projects, teams, and tasks in dedicated workspaces",
+          isPurple: true
+        },
+        {
+          icon: <CheckCircle className="w-8 h-8" />,
+          title: "Task Management",
+          desc: "Track progress, assign owners, and set deadlines with ease",
+          isPurple: false
+        },
+        {
+          icon: <MessageSquare className="w-8 h-8" />,
+          title: "Team Chat",
+          desc: "Real-time collaboration with integrated chat and notifications",
+          isPurple: true
+        },
+        // Row 2: White-Purple-White
+        {
+          icon: <BarChart className="w-8 h-8" />,
+          title: "Progress Dashboard",
+          desc: "Visual analytics to track team performance and project velocity",
+          isPurple: false
+        },
+        {
+          icon: <TeamIcon className="w-8 h-8" />,
+          title: "Team Collaboration",
+          desc: "Real-time updates, comments, and notifications keep everyone aligned.",
+          isPurple: true
+        },
+        {
+          icon: <Shield className="w-8 h-8" />,
+          title: "Enterprise Security",
+          desc: "SSO, 2FA, and SOC2 compliance for enterprise peace of mind.",
+          isPurple: false
+        }
+      ].map((feature, idx) => (
+        <div 
+          key={idx} 
+          className={`p-8 rounded-2xl transition-all duration-500 hover:scale-[1.02] cursor-pointer relative overflow-hidden group shadow-lg hover:shadow-2xl
+            ${feature.isPurple 
+              ? 'text-white' 
+              : 'text-gray-900 border border-gray-200'
+            }`}
+          style={{
+            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            background: feature.isPurple 
+              ? 'linear-gradient(to right, #a855f7, #ec4899)'
+              : '#ffffff',
+          }}
+          onMouseEnter={(e) => {
+            if (feature.isPurple) {
+              e.currentTarget.style.background = '#ffffff';
+              e.currentTarget.style.color = '#1f2937';
+            } else {
+              e.currentTarget.style.background = 'linear-gradient(to right, #a855f7, #ec4899)';
+              e.currentTarget.style.color = '#ffffff';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (feature.isPurple) {
+              e.currentTarget.style.background = 'linear-gradient(to right, #a855f7, #ec4899)';
+              e.currentTarget.style.color = '#ffffff';
+            } else {
+              e.currentTarget.style.background = '#ffffff';
+              e.currentTarget.style.color = '#1f2937';
+            }
+          }}
+        >
+          {/* Content Container */}
+          <div className="relative z-10">
+            {/* Icon Container */}
+            <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 transition-all duration-500 group-hover:scale-110
+              ${feature.isPurple 
+                ? 'bg-white/20 group-hover:bg-gradient-to-r group-hover:from-purple-500 group-hover:to-pink-500' 
+                : 'bg-gradient-to-r from-purple-500 to-pink-500 group-hover:bg-white/20'
+              }`}>
+              <div className="transition-all duration-500">
+                {React.cloneElement(feature.icon, {
+                  className: `w-8 h-8 transition-all duration-500
+                    ${feature.isPurple 
+                      ? 'text-white group-hover:text-purple-600' 
+                      : 'text-purple-600 group-hover:text-white'
+                    }`
+                })}
+              </div>
+            </div>
+            
+            {/* Title */}
+            <h3 className="text-xl font-bold mb-3 transition-all duration-500">
+              {feature.title}
+            </h3>
+            
+            {/* Description */}
+            <p className={`transition-all duration-500
+              ${feature.isPurple 
+                ? 'text-white/90 group-hover:text-gray-600' 
+                : 'text-gray-600 group-hover:text-white/90'
+              }`}>
+              {feature.desc}
+            </p>
+          </div>
           
-          <div className="max-w-7xl mx-auto relative">
-            <div className="text-center mb-16">
-              <div className="inline-block mb-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center mx-auto animate-bounce">
-                  <Zap className="w-8 h-8 text-white" />
-                </div>
-              </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                Everything your team needs to succeed
-              </h2>
-              <p className="text-gray-600 text-lg">
-                Comprehensive tools for planning, execution, and collaboration
-              </p>
-            </div>
+          {/* Border Glow on Hover */}
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-20 blur transition-all duration-500"></div>
+        </div>
+      ))}
+    </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-              {cardFeatures.map((feature, idx) => (
-                <div 
-                  key={idx} 
-                  className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl border border-purple-100 hover:border-purple-300 hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] group relative overflow-hidden cursor-pointer"
-                  onClick={() => handleCardClick(idx)}
-                >
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
-                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-r ${feature.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                    <div className="relative">
-                      {feature.icon}
-                      <div className="absolute inset-0 bg-current opacity-20 blur-sm"></div>
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-purple-600 transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600">{feature.description}</p>
-                  <div className="mt-4 flex items-center text-sm text-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <span>See in action</span>
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </div>
-                </div>
-              ))}
-              
-              {[
-                {
-                  icon: <TeamIcon className="w-8 h-8 text-purple-500" />,
-                  title: "Team Collaboration",
-                  desc: "Real-time updates, comments, and notifications keep everyone aligned.",
-                  color: "from-blue-500 to-purple-500"
-                },
-                {
-                  icon: <Shield className="w-8 h-8 text-purple-600" />,
-                  title: "Enterprise Security",
-                  desc: "SSO, 2FA, and SOC2 compliance for enterprise peace of mind.",
-                  color: "from-purple-600 to-violet-600"
-                }
-              ].map((feature, idx) => (
-                <div 
-                  key={idx + cardFeatures.length} 
-                  className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl border border-purple-100 hover:border-purple-300 hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] group relative overflow-hidden"
-                >
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
-                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-r ${feature.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                    <div className="relative">
-                      {feature.icon}
-                      <div className="absolute inset-0 bg-current opacity-20 blur-sm"></div>
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-purple-600 transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600">{feature.desc}</p>
-                </div>
-              ))}
+    {/* Animated Stats */}
+    <div className="bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 rounded-2xl p-12 mb-16 backdrop-blur-sm border border-purple-200/30 shadow-lg">
+      <div className="grid md:grid-cols-4 gap-8 text-center">
+        {[
+          { number: "98%", label: "Team Satisfaction", icon: "😊" },
+          { number: "40%", label: "Faster Delivery", icon: "⚡" },
+          { number: "10K+", label: "Active Teams", icon: "👥" },
+          { number: "99.9%", label: "Uptime", icon: "🔄" },
+        ].map((stat, idx) => (
+          <div key={idx} className="group">
+            <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+              {stat.number}
             </div>
-
-            {/* Animated Stats */}
-            <div className="bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 rounded-2xl p-12 mb-16 backdrop-blur-sm border border-purple-200/30">
-              <div className="grid md:grid-cols-4 gap-8 text-center">
-                {[
-                  { number: "98%", label: "Team Satisfaction", icon: "😊" },
-                  { number: "40%", label: "Faster Delivery", icon: "⚡" },
-                  { number: "10K+", label: "Active Teams", icon: "👥" },
-                  { number: "99.9%", label: "Uptime", icon: "🔄" },
-                ].map((stat, idx) => (
-                  <div key={idx} className="group">
-                    <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-                      {stat.number}
-                    </div>
-                    <div className="text-gray-600 mb-1">{stat.label}</div>
-                    <div className="text-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      {stat.icon}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Final CTA */}
-            <div className="text-center bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 rounded-3xl p-12 shadow-2xl relative overflow-hidden">
-              <div className="absolute inset-0">
-                {[...Array(20)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="absolute w-2 h-2 bg-white rounded-full animate-ping"
-                    style={{
-                      left: `${Math.random() * 100}%`,
-                      top: `${Math.random() * 100}%`,
-                      animationDelay: `${Math.random() * 2}s`,
-                    }}
-                  />
-                ))}
-              </div>
-              
-              <div className="relative z-10">
-                <h2 className="text-4xl font-bold text-white mb-6">
-                  Ready to achieve more with clarity?
-                </h2>
-                <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">
-                  Join thousands of teams who use Planyty to turn their plans into reality.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link
-                    to="/onboard-company"
-                    className="px-8 py-4 bg-white text-purple-600 font-bold rounded-xl hover:bg-gray-50 transition-all duration-300 hover:scale-105 text-lg shadow-lg group"
-                  >
-                    <span className="flex items-center justify-center">
-                      Start Free Trial
-                      <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </span>
-                  </Link>
-                  <Link
-                    to="/login"
-                    className="px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-xl hover:bg-white/10 transition-all duration-300 text-lg group"
-                  >
-                    <span className="flex items-center justify-center">
-                      Book a Demo
-                      <CalendarIcon className="ml-2 w-5 h-5" />
-                    </span>
-                  </Link>
-                </div>
-                <p className="text-white/70 text-sm mt-8">
-                  No credit card required • Free for teams up to 10 • Cancel anytime
-                </p>
-              </div>
+            <div className="text-gray-600 mb-1">{stat.label}</div>
+            <div className="text-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              {stat.icon}
             </div>
           </div>
-        </section>
+        ))}
+      </div>
+    </div>
 
+    {/* Final CTA */}
+    <div className="text-center bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 rounded-3xl p-12 shadow-2xl relative overflow-hidden">
+      <div className="absolute inset-0">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 bg-white rounded-full animate-ping"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 2}s`,
+            }}
+          />
+        ))}
+      </div>
+      
+      <div className="relative z-10">
+        <h2 className="text-4xl font-bold text-white mb-6">
+          Ready to achieve more with clarity?
+        </h2>
+        <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">
+          Join thousands of teams who use Planyty to turn their plans into reality.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link
+            to="/onboard-company"
+            className="px-8 py-4 bg-white text-purple-600 font-bold rounded-xl hover:bg-gray-50 transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-lg group"
+          >
+            <span className="flex items-center justify-center">
+              Start Free Trial
+              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </span>
+          </Link>
+          <Link
+            to="/login"
+            className="px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-xl hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:shadow-lg group"
+          >
+            <span className="flex items-center justify-center">
+              Book a Demo
+              <CalendarIcon className="ml-2 w-5 h-5" />
+            </span>
+          </Link>
+        </div>
+        <p className="text-white/70 text-sm mt-8">
+          No credit card required • Free for teams up to 10 • Cancel anytime
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
         {/* Footer */}
         <footer className="border-t border-purple-100/50 bg-white/80 backdrop-blur-sm py-12 px-6">
           <div className="max-w-7xl mx-auto">
