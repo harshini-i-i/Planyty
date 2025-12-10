@@ -11,10 +11,6 @@ This is the frontend application for Planyty, a modern project management and co
 - **State Management:** React Context
 - **API Communication:** Axios (for REST) and Socket.io Client (for real-time)
 
-## Setup and Installation
-
-Please refer to the detailed setup guide: [SETUP_GUIDE.md](./SETUP_GUIDE.md)
-
 ### Quick Start
 
 1.  **Clone the repository:**
@@ -62,7 +58,7 @@ planyty-frontend/
 ├── package.json
 ├── tailwind.config.js
 ├── vite.config.js
-└── SETUP_GUIDE.md           # Detailed setup and deployment instructions
+
 \`\`\`
 
 ## License
