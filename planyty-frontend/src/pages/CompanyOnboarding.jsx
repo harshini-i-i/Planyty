@@ -36,15 +36,38 @@ const CompanyOnboarding = () => {
     setAdminEmails(newEmails);
   };
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+  // In CompanyOnboarding.jsx
+const handleSubmit = async () => {
+  setLoading(true);
+  
+  try {
+    const response = await fetch('http://localhost:5000/api/companies/onboard', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        companyName,
+        adminEmails: adminEmails.filter(email => email.trim() !== ''),
+        ownerEmail: yourEmail
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
       setInvitesSent(true);
-    }, 1500);
-  };
+      console.log('Invitations sent:', data);
+    } else {
+      alert(`Failed: ${data.error || 'Unknown error'}`);
+      setLoading(false);
+    }
+  } catch (error) {
+    console.error('Onboarding error:', error);
+    alert('Network error. Please check your connection.');
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center p-6">
