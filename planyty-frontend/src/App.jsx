@@ -22,7 +22,8 @@ import SignUp from './pages/SignUp';
 import NotFound from './pages/NotFound';
 import Team from './pages/Team';
 import Settings from './pages/Settings';
-
+import Portfolio from './pages/Portfolio'; // ✅ Added Portfolio import
+import Goals from './pages/Goals'; 
 // Workspace Pages
 import Workspaces from './pages/workspaces/Workspaces';
 import WorkspaceDetail from './pages/workspaces/WorkspaceDetail';
@@ -104,7 +105,8 @@ const MainLayout = () => {
             <Route path="/meetings" element={<Meetings />} />
             <Route path="/team" element={<Team />} />
             <Route path="/settings" element={<Settings />} />
-            
+            <Route path="/portfolio" element={<Portfolio />} /> {/* ✅ Portfolio route */}
+            <Route path="/goals" element={<Goals />} />
             {/* Catch all routes in main layout and redirect to dashboard */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
@@ -138,6 +140,9 @@ const AppRouter = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/onboard-company" element={<CompanyOnboarding />} />
+          {/* ✅ Also add Portfolio to public routes if you want it accessible */}
+          <Route path="/portfolio" element={<Navigate to="/login" replace />} />
+          <Route path="/goals" element={<Goals />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </>
       ) : (
@@ -147,7 +152,7 @@ const AppRouter = () => {
           <Route path="/login" element={<Navigate to="/dashboard" replace />} />
           <Route path="/signup" element={<Navigate to="/dashboard" replace />} />
           <Route path="/onboard-company" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/*" element={<MainLayout />} />
+          <Route path="/*" element={<MainLayout />} /> {/* ✅ This includes Portfolio route */}
         </>
       )}
     </Routes>

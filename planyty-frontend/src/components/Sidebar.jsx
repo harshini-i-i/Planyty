@@ -1,15 +1,17 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ListChecks, MessageSquare, Calendar, Settings, Users, Folder, X } from 'lucide-react';
+import { LayoutDashboard, ListChecks, MessageSquare, Calendar, Settings, Users, Folder, X ,Briefcase, Target } from 'lucide-react';
 import logo from '../assets/planytynewlogo.png';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Workspaces', path: '/workspaces', icon: Folder },
   { name: 'Tasks', path: '/tasks', icon: ListChecks },
+   { name: 'Goals', path: '/goals', icon: Target }, 
   { name: 'Chat', path: '/chat', icon: MessageSquare },
   { name: 'Meetings', path: '/meetings', icon: Calendar },
   { name: 'Team', path: '/team', icon: Users },
+   { name: 'Portfolio', path: '/portfolio', icon: Briefcase }, 
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
